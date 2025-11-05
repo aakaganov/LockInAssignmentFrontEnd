@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, watch, onMounted } from 'vue'
-import { useLeaderboardStore } from "../../stores/leaderboardStore";
-
+import { useLeaderboardStore } from '../../stores/leaderboardStore'
 
 const props = defineProps<{
   groupId?: string | null
@@ -9,33 +8,45 @@ const props = defineProps<{
 
 const leaderboardStore = useLeaderboardStore()
 
-// Load leaderboard when mounted if groupId exists
+// ✅ Load leaderboard when component mounts
 onMounted(() => {
   if (props.groupId) {
     leaderboardStore.fetchLeaderboard(props.groupId)
   }
 })
 
-// React if groupId changes (ex. switching groups)
-watch(() => props.groupId, (newGroupId) => {
-  if (newGroupId) {
-    leaderboardStore.fetchLeaderboard(newGroupId)
+// ✅ Watch for group changes and reload leaderboard
+watch(
+  () => props.groupId,
+  (newGroupId) => {
+    if (newGroupId) {
+      leaderboardStore.fetchLeaderboard(newGroupId)
+    } else {
+      leaderboardStore.reset()
+    }
   }
-})
+)
 
-// Use computed values from store
-const byTasks = computed(() => leaderboardStore.leaderboardTasks)
-const byTime = computed(() => leaderboardStore.leaderboardTime)
+// ✅ Use computed values that point to actual store data
+const byTasks = computed(() => leaderboardStore.byTasks)
+const byTime = computed(() => leaderboardStore.byTime)
 </script>
 
 <template>
   <div class="leaderboard">
     <h3>Leaderboard</h3>
+
+    <!-- No group selected -->
     <div v-if="!props.groupId">Select a group to view the leaderboard.</div>
 
+    <!-- Data Loading -->
     <div v-else>
       <div v-if="leaderboardStore.loading">Loading leaderboard...</div>
-      <div v-else-if="leaderboardStore.error" class="error">{{ leaderboardStore.error }}</div>
+      <div v-else-if="leaderboardStore.error" class="error">
+        {{ leaderboardStore.error }}
+      </div>
+
+      <!-- ✅ Render leaderboards -->
       <div v-else>
         <section>
           <h4>🏆 By Tasks</h4>

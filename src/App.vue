@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 
 // Components
 import LoginForm from './components/account/LoginForm.vue'
@@ -8,7 +8,7 @@ import UserProfile from './components/account/UserProfile.vue'
 import TaskForm from './components/task/TaskForm.vue'
 import TaskList from './components/task/TaskList.vue'
 
-import ConfirmRequestList from './components/confirmTask/ConfirmationRequestList.vue'
+import NotificationList from './components/confirmAction/NotificationList.vue'
 
 import GroupList from './components/friendGroup/GroupList.vue'
 import GroupItem from './components/friendGroup/GroupItem.vue'
@@ -34,6 +34,23 @@ const leaderboardStore = useLeaderboardStore()
 const currentUserId = ref<string | null>(null)
 const selectedGroupId = ref<string | null>(null)
 const editingTaskId = ref<string | null>(null)
+const loading = ref(true)
+
+// Computed reactive values for current user info
+const userDisplay = computed(() => {
+  if (!userStore.currentUser) return ''
+  return `${userStore.currentUser.name} (${userStore.currentUser.email})`
+})
+
+// Restore session on page load
+onMounted(async () => {
+  const valid = await userStore.restoreSession()
+  if (valid && userStore.currentUser) {
+    currentUserId.value = userStore.currentUser.userId
+  } else {
+    currentUserId.value = null
+  }
+})
 
 // Watch currentUserId to fetch tasks, groups, and confirmations
 watch(currentUserId, async (id) => {
@@ -47,14 +64,35 @@ watch(currentUserId, async (id) => {
 // Watch selectedGroupId to fetch leaderboard
 watch(selectedGroupId, async (gid) => {
   if (gid) {
-    await leaderboardStore.fetchLeaderboardTasks(gid)
-    await leaderboardStore.fetchLeaderboardTime(gid)
+    await leaderboardStore.fetchByTasks(gid)
+    await leaderboardStore.fetchByTime(gid)
   }
 })
+/** 
+async function handleLogin(userId: string) {
+  // Fetch full user data first so name/email are up to date
+  await userStore.fetchUser(userId);
+  // Then set currentUserId to trigger dashboard updates
+  currentUserId.value = userId;
+}
+  */
 
-// Handlers
-function handleLogin(userId: string) {
-  currentUserId.value = userId
+async function handleLogin(userId: string) {
+  await userStore.fetchUser(userId);
+  currentUserId.value = userId;
+
+  await Promise.all([
+    taskStore.fetchTasks(userId),
+    groupStore.fetchGroups(userId),
+    confirmationStore.fetchConfirmations(userId),
+  ]);
+}
+
+
+function handleLogout() {
+  userStore.logout()
+  localStorage.removeItem("currentUser") // extra safeguard
+  currentUserId.value = null
 }
 
 async function handleDeleteUser() {
@@ -75,11 +113,11 @@ function handleEditTask(taskId: string) {
 <template>
   <div class="app">
     <h1>Time Management Dashboard</h1>
-
     <!-- LOGIN -->
     <section v-if="!currentUserId">
       <LoginForm @login="handleLogin" />
     </section>
+
 
     <!-- AUTHENTICATED APP -->
     <section v-else>
@@ -87,10 +125,14 @@ function handleEditTask(taskId: string) {
 
         <!-- LEFT SIDEBAR -->
         <aside>
-          <UserProfile :userId="currentUserId" @deleteUser="handleDeleteUser" />
+          <UserProfile
+            :userId="currentUserId"
+            @logout="handleLogout"
+            @deleteUser="handleDeleteUser"
+          />
           <GroupList :userId="currentUserId" @selectGroup="handleSelectGroup" />
           <hr />
-          <ConfirmRequestList :userId="currentUserId" />
+          <NotificationList :userId="currentUserId" />
         </aside>
 
         <!-- MAIN CONTENT -->

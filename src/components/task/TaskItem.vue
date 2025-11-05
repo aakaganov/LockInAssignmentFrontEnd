@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useTaskStore } from '../../stores/taskStore'
+import { useConfirmationStore } from '../../stores/confirmationStore'
 
 const taskStore = useTaskStore()
+const confirmationStore = useConfirmationStore()
 
 const props = defineProps<{
   taskId: string
@@ -23,10 +25,17 @@ const emit = defineEmits<{
 }>()
 
 const localStatus = ref(props.status)
+const actualTimeInput = ref<number | null>(null)
 
 async function onComplete() {
+  if (actualTimeInput.value === null || actualTimeInput.value <= 0) {
+    alert('Please enter the actual time spent (in minutes).')
+    return
+  }
+
   try {
-    await taskStore.completeTask(props.taskId)
+    console.log(`Completing task: ${props.taskId} with actualTime: ${actualTimeInput.value}`)
+    await taskStore.completeTask(props.taskId, actualTimeInput.value, props.ownerId)
     localStatus.value = 'completed'
   } catch (err) {
     console.error(err)
@@ -36,7 +45,8 @@ async function onComplete() {
 
 async function onDelete() {
   try {
-    await taskStore.deleteTask(props.taskId)
+    console.log(`Deleting task: ${props.taskId} (owner: ${props.ownerId})`)
+    await taskStore.deleteTask(props.taskId, props.ownerId)
   } catch (err) {
     console.error(err)
     alert('Failed to delete task.')
@@ -45,7 +55,7 @@ async function onDelete() {
 
 async function onRequestConfirmation() {
   try {
-    await taskStore.requestConfirmation(props.taskId, props.ownerId)
+    await confirmationStore.requestConfirmation(props.taskId, props.ownerId)
   } catch (err) {
     console.error(err)
     alert('Failed to request confirmation.')
@@ -71,13 +81,22 @@ function onEdit() {
     </div>
 
     <div class="actions">
-      <button
-        v-if="localStatus === 'pending'"
-        @click="onComplete"
-        :disabled="taskStore.loading"
-      >
-        {{ taskStore.loading ? 'Working...' : 'Complete' }}
-      </button>
+      <!-- ✅ Add input for actual time -->
+      <div v-if="localStatus === 'pending'">
+        <input
+          v-model.number="actualTimeInput"
+          type="number"
+          min="1"
+          placeholder="Actual time (min)"
+          style="width: 150px; margin-right: 8px;"
+        />
+        <button
+          @click="onComplete"
+          :disabled="taskStore.loading"
+        >
+          {{ taskStore.loading ? 'Working...' : 'Complete' }}
+        </button>
+      </div>
 
       <button
         v-if="localStatus === 'completed' && !confirmed && !confirmationRequested && props.groupRequiresConfirmation"

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useTaskStore } from '../../stores/taskStore'
 import TaskItem from './TaskItem.vue'
 
@@ -13,39 +13,37 @@ const emit = defineEmits<{
 
 const taskStore = useTaskStore()
 
-// Load tasks when component mounts and when ownerId changes
+// 🆕 State for filtering
+const showCompleted = ref(true)
+
+// Load tasks when mounted or when owner changes
 onMounted(async () => {
   if (props.ownerId) {
     await taskStore.fetchTasks(props.ownerId)
   }
 })
 
-watch(
-  () => props.ownerId,
-  async newOwner => {
-    if (newOwner) {
-      await taskStore.fetchTasks(newOwner)
-    }
+watch(() => props.ownerId, async (newOwner) => {
+  if (newOwner) {
+    await taskStore.fetchTasks(newOwner)
   }
-)
+})
 
-async function handleSuggestOrder() {
-  if (!props.ownerId) return
-  try {
-    await taskStore.suggestOrder(props.ownerId)
-  } catch (err) {
-    console.error(err)
-    alert('AI suggest order failed')
-  }
-}
+// 🆕 Computed filtered tasks
+const filteredTasks = computed(() => {
+  if (showCompleted.value) return taskStore.tasks
+  return taskStore.tasks.filter(t => t.status !== 'completed')
+})
 </script>
 
 <template>
   <div class="task-list">
     <div class="header">
       <h3>Your Tasks</h3>
-      <button @click="handleSuggestOrder" :disabled="taskStore.loading">
-        {{ taskStore.loading ? 'Working...' : 'Suggest Order (AI)' }}
+
+      <!-- 🆕 Toggle button -->
+      <button @click="showCompleted = !showCompleted">
+        {{ showCompleted ? 'Hide Completed' : 'Show Completed' }}
       </button>
     </div>
 
@@ -56,13 +54,13 @@ async function handleSuggestOrder() {
     <div v-else>
       <p v-if="taskStore.error" class="error">{{ taskStore.error }}</p>
 
-      <div v-if="taskStore.tasks.length === 0">
-        <p>No tasks yet.</p>
+      <div v-if="filteredTasks.length === 0">
+        <p>No tasks to show.</p>
       </div>
 
       <div v-else>
         <TaskItem
-          v-for="t in taskStore.tasks"
+          v-for="t in filteredTasks"
           :key="t.taskId"
           :taskId="t.taskId"
           :title="t.title"

@@ -1,45 +1,64 @@
-// src/stores/leaderboardStore.ts
 import { defineStore } from 'pinia'
-import * as api from '../apiClient'
+import { getLeaderboardByTasks, getLeaderboardByTime } from '../apiClient'
+
+interface TaskLeaderboardEntry {
+  userId: string
+  completedCount: number
+}
+
+interface TimeLeaderboardEntry {
+  userId: string
+  completedHours: number
+}
 
 export const useLeaderboardStore = defineStore('leaderboardStore', {
   state: () => ({
-    byTasks: [] as { userId: string; completedCount: number }[],
-    byTime: [] as { userId: string; completedHours: number }[],
+    byTasks: [] as TaskLeaderboardEntry[],
+    byTime: [] as TimeLeaderboardEntry[],
     loading: false,
     error: null as string | null,
   }),
+
+  getters: {
+    leaderboardTasks: (state) => state.byTasks,
+    leaderboardTime: (state) => state.byTime,
+  },
+
   actions: {
     async fetchByTasks(groupId: string) {
       this.loading = true
-      this.error = null
       try {
-        const res = await api.getLeaderboardByTasks(groupId)
-        if (res.error) throw new Error(res.error)
-        this.byTasks = res
+        const result = await getLeaderboardByTasks(groupId)
+        this.byTasks = result.leaderboard || []
       } catch (err: any) {
         this.error = err.message
       } finally {
         this.loading = false
       }
     },
+
     async fetchByTime(groupId: string) {
       this.loading = true
-      this.error = null
       try {
-        const res = await api.getLeaderboardByTime(groupId)
-        if (res.error) throw new Error(res.error)
-        this.byTime = res
+        const result = await getLeaderboardByTime(groupId)
+        this.byTime = result.leaderboard || []
       } catch (err: any) {
         this.error = err.message
       } finally {
         this.loading = false
       }
     },
+
+    async fetchLeaderboard(groupId: string) {
+      await Promise.all([
+        this.fetchByTasks(groupId),
+        this.fetchByTime(groupId),
+      ])
+    },
+
     reset() {
       this.byTasks = []
       this.byTime = []
-      this.loading = false
       this.error = null
     },
   },

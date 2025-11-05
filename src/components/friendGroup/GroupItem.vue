@@ -33,14 +33,21 @@ async function toggle() {
 }
 </script>
 
+
 <template>
   <div class="group-item">
     <h4>{{ name ?? groupId }}</h4>
 
+    <!-- ✅ Members list -->
     <p v-if="members && members.length">
       <strong>Members:</strong> {{ members.join(', ') }}
     </p>
     <p v-else>No members yet.</p>
+
+    <!-- ✅ Confirmation status -->
+    <p v-if="requiresConfirmation">
+      Confirmation is required for tasks in this group.
+    </p>
 
     <label>
       <input type="checkbox" v-model="localRequires" @change="toggle" />
@@ -51,6 +58,7 @@ async function toggle() {
     <slot name="members"></slot>
   </div>
 </template>
+
 
 <style scoped>
 .group-item {

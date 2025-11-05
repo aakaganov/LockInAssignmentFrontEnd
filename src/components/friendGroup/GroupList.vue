@@ -1,37 +1,42 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
-import { useGroupStore } from "../../stores/groupStore";
+import { ref, onMounted, watch } from 'vue'
+import { useGroupStore } from '../../stores/groupStore'
+import CreateGroupForm from './CreateGroupForm.vue'
 
-const props = defineProps<{
-  userId: string | null
-}>()
+const props = defineProps<{ userId: string }>()
+const emit = defineEmits<{ (e: 'selectGroup', groupId: string): void }>()
 
-const emit = defineEmits<{
-  (e: 'selectGroup', groupId: string): void
-}>()
-
-// Use Pinia store
 const groupStore = useGroupStore()
+const showCreateForm = ref(false)
 
-// Automatically load groups when userId comes in
-onMounted(() => {
-  if (props.userId) {
-    groupStore.listGroups(props.userId)
-  }
+onMounted(async () => {
+  if (props.userId) await groupStore.fetchGroups(props.userId)
 })
 
-// If userId changes, reload list
-watch(() => props.userId, (newUserId) => {
-  if (newUserId) {
-    groupStore.listGroups(newUserId)
-  }
+watch(() => props.userId, async (newId) => {
+  if (newId) await groupStore.fetchGroups(newId)
 })
 
-// Groups come from store
-const groups = computed(() => groupStore.groups)
+function toggleCreateForm() {
+  showCreateForm.value = !showCreateForm.value
+}
 
-function select(gid: string) {
-  emit('selectGroup', gid)
+async function handleGroupCreated() {
+  showCreateForm.value = false
+  await groupStore.fetchGroups(props.userId)
+}
+
+async function deleteGroup(groupId: string) {
+  console.log("Trying to delete group:", groupId);
+  if (!props.userId) return
+  if (!confirm("Are you sure you want to delete this group?")) return
+
+  try {
+    const res = await groupStore.deleteGroup(groupId, props.userId)
+    console.log("Delete response:", res);
+  } catch (err: any) {
+    console.error("Failed to delete group:", err.message)
+  }
 }
 </script>
 
@@ -39,23 +44,98 @@ function select(gid: string) {
   <div class="group-list">
     <h3>Your Groups</h3>
 
-    <div v-if="groupStore.loading">Loading...</div>
-    <div v-else-if="groups.length === 0">No groups yet.</div>
+    <!-- Create Group Button -->
+    <button @click="toggleCreateForm" class="create-btn">
+      {{ showCreateForm ? 'Cancel' : '➕ Create New Group' }}
+    </button>
 
-    <ul v-else>
-      <li v-for="g in groups" :key="g.groupId">
-        <button @click="select(g.groupId)">
-          {{ g.name || g.groupId }}
+    <!-- Inline Create Form -->
+    <CreateGroupForm
+      v-if="showCreateForm"
+      :ownerId="props.userId"
+      @created="handleGroupCreated"
+    />
+
+    <!-- Group List -->
+    <ul v-if="groupStore.groups.length > 0">
+      <li
+        v-for="g in groupStore.groups"
+        :key="g.groupId"
+        class="group-item"
+      >
+        <span @click="$emit('selectGroup', g.groupId)">
+          {{ g.groupName }}
+        </span>
+
+        <!-- Delete button for owner -->
+        <button
+          v-if="g.ownerId === props.userId"
+          class="delete-btn"
+          @click.stop="deleteGroup(g.groupId)"
+        >
+          ❌
         </button>
       </li>
     </ul>
 
-    <div v-if="groupStore.error" class="error">{{ groupStore.error }}</div>
+    <p v-else>No groups yet.</p>
+
+    <p v-if="groupStore.error" class="error">{{ groupStore.error }}</p>
   </div>
 </template>
 
 <style scoped>
-.group-list { padding: 8px; }
-button { margin: 4px 0; }
-.error { color: red; font-size: 0.9em; }
+.group-list {
+  padding: 8px;
+}
+
+.create-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 8px;
+}
+
+.create-btn:hover {
+  background: #0056b3;
+}
+
+.group-item {
+  list-style: none;
+  padding: 6px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+}
+
+.group-item span {
+  flex: 1;
+}
+
+.group-item:hover {
+  background: #f2f2f2;
+}
+
+.delete-btn {
+  background: transparent;
+  border: none;
+  color: red;
+  margin-left: 8px;
+  cursor: pointer;
+}
+.delete-btn:hover {
+  color: darkred;
+}
+
+.error {
+  color: red;
+  font-size: 0.9em;
+}
 </style>

@@ -1,40 +1,74 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useGroupStore } from "../../stores/groupStore";
-
+import { useUserStore } from '../../stores/userStore'
+import * as api from '../../apiClient'
 
 const props = defineProps<{
   groupId: string
 }>()
 
 const emit = defineEmits<{
-  (e: 'added', groupId: string, userId: string): void
+  (e: 'invited', groupId: string, email: string): void
 }>()
 
-const newMember = ref('')
-const groupStore = useGroupStore()
+const newInviteEmail = ref('')
+const loading = ref(false)
+const userStore = useUserStore()
 
-async function add() {
-  if (!newMember.value) return
+async function invite() {
+  if (!newInviteEmail.value) {
+    alert("Please enter an email address.");
+    return;
+  }
+
+  loading.value = true
   try {
-    await groupStore.addMember(props.groupId, newMember.value)
-    emit('added', props.groupId, newMember.value)
-    newMember.value = ''
+    const payload = {
+      groupId: props.groupId,
+      email: newInviteEmail.value,
+      invitedBy: userStore.currentUser?.userId || '', // who is inviting
+    }
+
+    const res = await api.inviteUserByEmail(payload)
+
+    if (res.error) throw new Error(res.error)
+
+    alert(`Invitation sent to ${newInviteEmail.value}`)
+    emit('invited', props.groupId, newInviteEmail.value)
+    newInviteEmail.value = ''
   } catch (err: any) {
-    console.error('Error adding member:', err.message)
+    console.error("Invite error:", err.message)
+    alert("Failed to send invitation.")
+  } finally {
+    loading.value = false
   }
 }
 </script>
 
 <template>
   <div class="add-member">
-    <h4>Add Member</h4>
-    <input v-model="newMember" placeholder="User ID to add" />
-    <button @click="add">Add</button>
+    <h4>Invite Member</h4>
+    <input
+      v-model="newInviteEmail"
+      placeholder="Enter user's email"
+      type="email"
+    />
+    <button @click="invite" :disabled="loading">
+      {{ loading ? 'Sending...' : 'Send Invite' }}
+    </button>
   </div>
 </template>
 
 <style scoped>
-.add-member { padding: 6px; }
-input { margin-right: 6px; }
+.add-member { 
+  padding: 6px; 
+}
+input { 
+  margin-right: 6px; 
+  padding: 4px;
+}
+button { 
+  padding: 4px 8px;
+  cursor: pointer;
+}
 </style>

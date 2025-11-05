@@ -48,37 +48,40 @@ function resetForm() {
 
 async function submit() {
   if (!props.ownerId) {
-    alert('Select a user first')
+    alert('You must be logged in to create tasks.')
     return
   }
-
+  
   try {
     if (props.editingTask) {
-      // ✅ Update existing task using Pinia store
+      // 🟢 Update existing task
       await taskStore.updateTask(props.editingTask.taskId, {
         title: title.value,
         description: description.value,
         dueDate: dueDate.value,
-        estimatedTime: estimatedTime.value
+        estimatedTime: estimatedTime.value,
       })
       emit('updated')
     } else {
-      // ✅ Create new task using Pinia store
-      await taskStore.createTask({
-        ownerId: props.ownerId,
-        title: title.value,
-        description: description.value,
-        dueDate: dueDate.value,
-        estimatedTime: estimatedTime.value
-      })
+      // 🟢 Create new task (updated to match store)
+      await taskStore.createTask(
+        props.ownerId,
+        title.value,
+        description.value || null,
+        dueDate.value || null,
+        estimatedTime.value
+      )
+
       emit('created')
       resetForm()
     }
-  } catch (err) {
-    console.error(err)
-    alert('Something went wrong. Please try again.')
+  } catch (err: any) {
+    console.error('Error creating/updating task:', err)
+    alert(taskStore.error || 'Something went wrong. Please try again.')
   }
 }
+
+
 </script>
 
 <template>

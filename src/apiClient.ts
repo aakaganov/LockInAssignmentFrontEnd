@@ -10,17 +10,31 @@ async function post(endpoint: string, body: any) {
 }
 
 // ===== ACCOUNT ACTIONS =====
-export async function addUser(userId: string, name: string, email: string) {
-  return post("/Account/addUser", { userId, name, email });
+
+// Signup / Add user with password
+export async function addUser(name: string, email: string, password: string) {
+  return post("/Account/addUser", {name, email, password });
 }
 
+// Get user info (no password returned)
 export async function getUser(userId: string) {
   return post("/Account/getUser", { userId });
 }
 
+// Delete user
 export async function deleteUser(userId: string) {
   return post("/Account/deleteUser", { userId });
 }
+
+// Update user info (optional password update)
+export async function updateUser(userId: string, name: string, email: string, password?: string) {
+  return post("/Account/updateUser", { userId, name, email, password });
+}
+// Login user with password
+export async function loginUser(email: string, password: string) {
+  return post("/Account/loginUser", { email, password });
+}
+
 
 // ===== TASK ACTIONS =====
 export async function createTask(ownerId: string, title: string, description: string | null, dueDate: string | null, estimatedTime: number) {
@@ -39,14 +53,35 @@ export async function deleteTask(taskId: string) {
   return post("/Task/deleteTask", { taskId });
 }
 
+
 export async function listTasks(ownerId: string) {
   return post("/Task/listTasks", { ownerId });
 }
 
+
 // ===== GROUP ACTIONS =====
-export async function createGroup(groupId: string, name: string, requiresConfirmation: boolean) {
-  return post("/FriendGroup/createGroup", { groupId, name, requiresConfirmation });
+export async function createGroup({
+  ownerId,
+  groupName,
+  confirmationRequired,
+  invitedEmails,
+}: {
+  ownerId: string;
+  groupName: string;
+  confirmationRequired: boolean;
+  invitedEmails: string[];
+}) {
+  return post("/FriendGroup/createGroup", {
+    ownerId,
+    groupName,
+    confirmationRequired,
+    invitedEmails, // send as invitedEmails
+  });
 }
+
+
+
+
 
 export async function addMember(groupId: string, userId: string) {
   return post("/FriendGroup/addMember", { groupId, userId });
@@ -63,6 +98,33 @@ export async function listGroups(userId: string) {
 export async function setConfirmationPolicy(groupId: string, requiresConfirmation: boolean) {
   return post("/FriendGroup/setConfirmationPolicy", { groupId, requiresConfirmation });
 }
+// ===== GROUP INVITE ACTIONS =====
+
+// Invite a user to a group by email (sends a notification, does NOT add them yet)
+export async function inviteUserByEmail(payload: { 
+  groupId: string; 
+  email: string; 
+  invitedBy: string;
+}) {
+  return post("/FriendGroup/inviteUserByEmail", payload);
+}
+
+// Accept a group invite (user joins the group)
+export async function acceptInvite(payload: { 
+  groupId: string; 
+  userId: string; 
+}) {
+  return post("/FriendGroup/acceptInvite", payload);
+}
+
+// Decline a group invite
+export async function declineInvite(payload: { 
+  groupId: string; 
+  userId: string; 
+}) {
+  return post("/FriendGroup/declineInvite", payload);
+}
+
 
 // ===== CONFIRMATION ACTIONS =====
 export async function requestConfirmation(taskId: string, requestedBy: string) {
@@ -96,4 +158,21 @@ export async function getLeaderboardByTime(groupId: string) {
 
 export async function resetWeeklyStats() {
   return post("/Leaderboard/resetWeeklyStats", {});
+}
+
+
+// ===== NOTIFICATION ACTIONS =====
+
+// Get all notifications (including group invites) for a user
+export async function getNotifications(payload: { userId: string }) {
+  return post("/Notification/list", payload);
+}
+
+// Accept a group invite from notifications
+export async function acceptGroupInvite(payload: { groupId: string; userId: string }) {
+  return post("/Notification/acceptInvite", payload);
+}
+
+export async function deleteGroup(payload: { groupId: string; userId: string }) {
+  return post("/FriendGroup/deleteGroup", payload);
 }
