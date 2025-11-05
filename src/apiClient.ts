@@ -110,6 +110,7 @@ export async function inviteUserByEmail(payload: {
 }
 
 // Accept a group invite (user joins the group)
+
 export async function acceptInvite(payload: { 
   groupId: string; 
   userId: string; 

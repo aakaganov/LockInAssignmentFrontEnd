@@ -1,87 +1,83 @@
-<template>
-  <div class="user-profile" v-if="props.userId">
-    <h3>Profile</h3>
-
-    <label>Name:</label>
-    <input v-model="name" />
-
-    <label>Email:</label>
-    <input v-model="email" type="email" />
-
-    <label>Password:</label>
-    <input v-model="password" type="password" placeholder="Leave blank to keep current password" />
-
-    <button @click="saveProfile">Save</button>
-    <button @click="logout">Logout</button>
-    <button @click="$emit('deleteUser', props.userId)">Delete Account</button>
-  </div>
-
-  <div v-else>
-    <p>No user selected.</p>
-  </div>
-</template>
-
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { defineProps, defineEmits, computed } from 'vue'
 import { useUserStore } from '../../stores/userStore'
+
+const props = defineProps<{
+  userId: string
+}>()
+
+const emit = defineEmits<{
+  (e: 'logout'): void
+  (e: 'deleteUser'): void
+}>()
 
 const userStore = useUserStore()
 
-const props = defineProps<{ userId: string | null }>()
-const emit = defineEmits<{
-  (e: 'logout'): void
-  (e: 'deleteUser', userId: string): void
-}>()
-
-const name = ref('')
-const email = ref('')
-const password = ref('')
-
-// Load user data
-watch(
-  () => props.userId,
-  async (newId) => {
-    if (newId) {
-      await userStore.fetchUser(newId)
-      const user = userStore.users.find(u => u.userId === newId)
-      if (user) {
-        name.value = user.name
-        email.value = user.email
-        password.value = ''
-      }
-    }
-  },
-  { immediate: true }
+const user = computed(() =>
+  userStore.users.find(u => u.userId === props.userId) || userStore.currentUser
 )
-
-// Save profile
-async function saveProfile() {
-  if (!props.userId) return
-  await userStore.updateUser(props.userId, name.value, email.value, password.value || undefined)
-  password.value = ''
-  alert('Profile updated successfully!')
-}
-
-// ✅ Logout without router
-function logout() {
-  userStore.logout()
-  //console.log("Logout clicked");
-  emit('logout')  // tell App.vue to switch back to login screen
-}
 </script>
 
+<template>
+  <div class="profile-card" v-if="user">
+    <h3>{{ user.name }}</h3>
+    <p>{{ user.email }}</p>
+    <div class="buttons">
+      <button @click="$emit('logout')" class="logout">Logout</button>
+      <button @click="$emit('deleteUser')" class="delete">Delete Account</button>
+    </div>
+  </div>
+</template>
 
 <style scoped>
-.user-profile {
-  padding: 12px;
-  border: 1px solid #eee;
-  border-radius: 6px;
+.profile-card {
+  background: #fff;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  text-align: center;
+}
+
+h3 {
+  font-size: 1.2rem;
+  margin-bottom: 4px;
+}
+
+p {
+  font-size: 0.95rem;
+  margin-bottom: 12px;
+  color: #555;
+}
+
+.buttons {
   display: flex;
-  flex-direction: column;
+  justify-content: center;
   gap: 8px;
 }
 
 button {
-  margin-top: 4px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+}
+
+button.logout {
+  background-color: #3498db;
+  color: white;
+}
+
+button.logout:hover {
+  background-color: #2980b9;
+}
+
+button.delete {
+  background-color: #e74c3c;
+  color: white;
+}
+
+button.delete:hover {
+  background-color: #c0392b;
 }
 </style>

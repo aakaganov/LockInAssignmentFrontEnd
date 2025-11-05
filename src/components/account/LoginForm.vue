@@ -19,39 +19,34 @@ async function handleAuth() {
   }
 
   try {
-    let user;
+    let result;
     if (isSignup.value) {
       if (!name.value.trim()) {
         alert("Name is required for signup.")
         return
       }
-      user = await userStore.signup(name.value.trim(), email.value.trim(), password.value)
+      result = await userStore.signup(name.value.trim(), email.value.trim(), password.value)
     } else {
-      user = await userStore.login(email.value.trim(), password.value)
+      result = await userStore.login(email.value.trim(), password.value)
     }
 
-    // Emit userId, not email
-    emit('login', user.userId)
+    emit('login', result.userId)
   } catch (err: any) {
     console.error('Auth failed:', err.message)
     alert(err.message || "Authentication failed.")
   }
 }
-
-
-
 </script>
 
 <template>
-  <div class="login-form">
+  <div class="login-card">
     <h3>{{ isSignup ? "Create Account" : "Login" }}</h3>
 
-    <div v-if="isSignup">
-      <input v-model="name" placeholder="Name" />
+    <div class="inputs">
+      <input v-if="isSignup" v-model="name" placeholder="Name" />
+      <input v-model="email" placeholder="Email or Username" />
+      <input v-model="password" placeholder="Password" type="password" />
     </div>
-
-    <input v-model="email" placeholder="Email" type="email" />
-    <input v-model="password" placeholder="Password" type="password" />
 
     <button @click="handleAuth">
       {{ isSignup ? "Sign Up" : "Login" }}
@@ -64,23 +59,67 @@ async function handleAuth() {
 </template>
 
 <style scoped>
-.login-form {
-  padding: 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
+.login-card {
+  max-width: 380px;
+  margin: 40px auto;
+  padding: 24px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 16px;
+  text-align: center;
+}
+
+h3 {
+  font-size: 1.5rem;
+  color: #2c3e50;
+  margin-bottom: 12px;
+}
+
+.inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+input {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+input:focus {
+  border-color: #3498db;
+  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+  outline: none;
 }
 
 button {
-  margin-top: 4px;
+  padding: 12px;
+  margin-top: 8px;
+  border-radius: 8px;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+button:hover {
+  background-color: #2980b9;
+  transform: translateY(-1px);
 }
 
 .toggle {
-  color: blue;
+  color: #3498db;
   text-decoration: underline;
   cursor: pointer;
   font-size: 0.9rem;
+  margin-top: 8px;
 }
 </style>

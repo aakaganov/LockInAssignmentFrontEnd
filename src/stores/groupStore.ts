@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import * as api from "../apiClient";
 import { useConfirmationStore } from "./confirmationStore";
-
+import { listGroups } from "../apiClient";
 export const useGroupStore = defineStore("groupStore", {
   state: () => ({
     groups: [] as any[],
@@ -10,6 +10,21 @@ export const useGroupStore = defineStore("groupStore", {
   }),
 
   actions: {
+    async fetchGroups(userId: string) {
+      try {
+        const res = await listGroups(userId); // Make sure this returns objects like { groupId, groupName, ownerId }
+        console.log("Fetched groups:", res);
+        this.groups = res.map((g: any) => ({
+          groupId: g.groupId,
+          groupName: g.groupName,  // <-- make sure this exists
+          ownerId: g.ownerId,
+        }));
+      } catch (err) {
+        console.error("Failed to fetch groups:", err);
+        this.error = "Unable to load groups";
+      }
+    },
+    /**
     async fetchGroups(userId: string) {
       this.loading = true;
       this.error = null;
@@ -25,7 +40,7 @@ export const useGroupStore = defineStore("groupStore", {
         this.loading = false;
       }
     },
-
+ */
 
     async createGroup({
       ownerId,
