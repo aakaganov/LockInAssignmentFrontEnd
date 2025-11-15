@@ -1,7 +1,8 @@
+// stores/groupStore.ts
 import { defineStore } from "pinia";
 import * as api from "../apiClient";
 import { useConfirmationStore } from "./confirmationStore";
-import { listGroups } from "../apiClient";
+
 export const useGroupStore = defineStore("groupStore", {
   state: () => ({
     groups: [] as any[],
@@ -10,37 +11,56 @@ export const useGroupStore = defineStore("groupStore", {
   }),
 
   actions: {
-    async fetchGroups(userId: string) {
-      try {
-        const res = await listGroups(userId); // Make sure this returns objects like { groupId, groupName, ownerId }
-        console.log("Fetched groups:", res);
-        this.groups = res.map((g: any) => ({
-          groupId: g.groupId,
-          groupName: g.groupName,  // <-- make sure this exists
-          ownerId: g.ownerId,
-        }));
-      } catch (err) {
-        console.error("Failed to fetch groups:", err);
-        this.error = "Unable to load groups";
-      }
+
+    clearSelectedGroups() {
+      this.groups = [];
     },
-    /**
-    async fetchGroups(userId: string) {
+    /** Sync all groups for a user from API */
+    async syncGroups(userId: string) {
       this.loading = true;
       this.error = null;
+
       try {
         const res = await api.listGroups(userId);
-        if (res.error) throw new Error(res.error);
+        console.log("groupStore.syncGroups -> fetched groups:", JSON.stringify(res, null, 2));
 
-        // Replace groups entirely
-        this.groups = Array.isArray(res) ? res : [];
+        // Normalize data for frontend
+        this.groups = (res || []).map((g: any) => ({
+          groupId: g.groupId,
+          groupName: g.groupName,
+          ownerId: g.ownerId,
+          owner: g.owner
+            ? {
+                userId: g.owner.userId,
+                name: g.owner.name,
+                email: g.owner.email,
+              }
+            : null,
+          members: Array.isArray(g.members)
+            ? g.members.map((m: any) => ({
+                userId: m.userId,
+                name: m.name,
+                email: m.email,
+              }))
+            : [],
+          confirmationRequired: g.confirmationRequired ?? g.requiresConfirmation ?? false,
+          createdAt: g.createdAt,
+        }));
+
+        return this.groups;
       } catch (err: any) {
-        this.error = err.message;
+        this.error = err.message || "Unable to fetch groups";
+        console.error("groupStore.syncGroups error:", err);
+        throw err;
       } finally {
         this.loading = false;
       }
     },
- */
+
+    /** Original fetchGroups method now delegates to syncGroups */
+    async fetchGroups(userId: string) {
+      return await this.syncGroups(userId);
+    },
 
     async createGroup({
       ownerId,
@@ -62,7 +82,7 @@ export const useGroupStore = defineStore("groupStore", {
           ownerId,
           groupName,
           confirmationRequired,
-          invitedEmails, // pass the correct key
+          invitedEmails,
         });
 
         if (res.error) throw new Error(res.error);
@@ -76,7 +96,6 @@ export const useGroupStore = defineStore("groupStore", {
         };
         this.groups.push(newGroup);
 
-        // Send notifications to invited users
         if (res.invitedUsers?.length) {
           for (const memberId of res.invitedUsers) {
             confirmationStore.addNotification(
@@ -90,49 +109,12 @@ export const useGroupStore = defineStore("groupStore", {
         return { groupId: res.groupId, invitedUsers: res.invitedUsers || [] };
       } catch (err: any) {
         this.error = err.message;
-        console.error("createGroup error:", err);
+        console.error("groupStore.createGroup error:", err);
         throw err;
       } finally {
         this.loading = false;
       }
     },
-
-
-    /**
-      try {
-        const res = await api.createGroup({
-          ownerId,
-          groupName,
-          confirmationRequired,
-          members,
-        });
-
-        if (res.error) throw new Error(res.error);
-        const { groupId, invitedMembers } = res;
-
-        // Immediately add to local groups so UI updates instantly
-        this.groups.push({
-          groupId,
-          groupName,
-          members: [ownerId],
-          requiresConfirmation: confirmationRequired,
-        });
-
-        // Send join requests to invited members
-        for (const memberId of invitedMembers) {
-          confirmationStore.addNotification(
-            memberId,
-            `You were invited to join group "${groupName}"`,
-            "group_invite"
-          );
-        }
-
-      } catch (err: any) {
-        this.error = err.message;
-        console.error("createGroup error:", err);
-      } finally {
-        this.loading = false;
-      } */
 
     async inviteMember(groupId: string, email: string, invitedBy: string) {
       this.loading = true;
@@ -150,7 +132,7 @@ export const useGroupStore = defineStore("groupStore", {
         }
       } catch (err: any) {
         this.error = err.message;
-        console.error("inviteMember error:", err);
+        console.error("groupStore.inviteMember error:", err);
       } finally {
         this.loading = false;
       }
@@ -158,64 +140,56 @@ export const useGroupStore = defineStore("groupStore", {
 
     async acceptInvite(groupId: string, userId: string) {
       await api.acceptInvite({ groupId, userId });
-      await this.fetchGroups(userId);
+      await this.syncGroups(userId);
     },
 
     async declineInvite(groupId: string, userId: string) {
       await api.declineInvite({ groupId, userId });
     },
+
     async setConfirmationPolicy(groupId: string, requiresConfirmation: boolean) {
       this.loading = true;
       this.error = null;
       try {
         await api.setConfirmationPolicy(groupId, requiresConfirmation);
-        // Update local copy if present
-        const group = this.groups.find(g => g.groupId === groupId);
-        if (group) group.requiresConfirmation = requiresConfirmation;
+        const group = this.groups.find((g) => g.groupId === groupId);
+        if (group) group.confirmationRequired = requiresConfirmation;
       } catch (err: any) {
         this.error = err.message;
+        console.error("groupStore.setConfirmationPolicy error:", err);
       } finally {
         this.loading = false;
       }
     },
+
     async deleteGroup(groupId: string, userId: string) {
-      console.log("Store.deleteGroup called", groupId, userId);
       this.loading = true;
       this.error = null;
 
       try {
         const res = await api.deleteGroup({ groupId, userId });
-        console.log("API response:", res);
         if (res.error) throw new Error(res.error);
+        this.groups = this.groups.filter((g) => g.groupId !== groupId);
 
-        // Remove the deleted group from the local state
-        this.groups = this.groups.filter(g => g.groupId !== groupId);
+        this.groups = this.groups.filter((g) => g.groupId !== groupId);
+
       } catch (err: any) {
         this.error = err.message;
-        console.error("deleteGroup error:", err);
+        console.error("groupStore.deleteGroup error:", err);
         throw err;
       } finally {
         this.loading = false;
       }
     },
-    /** 
-    async deleteGroup(groupId: string, userId: string) {
-      this.loading = true;
-      this.error = null;
-      try {
-        const res = await api.deleteGroup({ groupId, userId });
-        if (res.success) {
-          // Remove group from local store
-          this.groups = this.groups.filter(g => g.groupId !== groupId);
-        }
-      } catch (err: any) {
-        this.error = err.message;
-        console.error("deleteGroup error:", err);
-      } finally {
-        this.loading = false;
-      }
-    },
-    */
+  async leaveGroup(groupId: string, userId: string) {
+    try {
+      await api.leaveGroup(groupId, userId);// Remove group from local store for leaving user
+      this.groups = this.groups.filter(g => g.groupId !== groupId);
+    } catch (err) {
+      console.error("Failed to leave group:", err);
+      throw err;
+    }
+  },
 
   },
 });

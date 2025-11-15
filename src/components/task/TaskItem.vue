@@ -1,10 +1,10 @@
+<!-- src/components/task/TaskItem.vue -->
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useTaskStore } from '../../stores/taskStore'
-import { useConfirmationStore } from '../../stores/confirmationStore'
+import TaskConfirm from '../task/TaskConfirm.vue'
 
 const taskStore = useTaskStore()
-const confirmationStore = useConfirmationStore()
 
 const props = defineProps<{
   taskId: string
@@ -26,6 +26,7 @@ const emit = defineEmits<{
 
 const localStatus = ref(props.status)
 const actualTimeInput = ref<number | null>(null)
+const showConfirmModal = ref(false)
 
 async function onComplete() {
   if (actualTimeInput.value === null || actualTimeInput.value <= 0) {
@@ -34,7 +35,6 @@ async function onComplete() {
   }
 
   try {
-    console.log(`Completing task: ${props.taskId} with actualTime: ${actualTimeInput.value}`)
     await taskStore.completeTask(props.taskId, actualTimeInput.value, props.ownerId)
     localStatus.value = 'completed'
   } catch (err) {
@@ -43,27 +43,17 @@ async function onComplete() {
   }
 }
 
+function onEdit() {
+  emit('edit', props.taskId)
+}
+
 async function onDelete() {
   try {
-    console.log(`Deleting task: ${props.taskId} (owner: ${props.ownerId})`)
     await taskStore.deleteTask(props.taskId, props.ownerId)
   } catch (err) {
     console.error(err)
     alert('Failed to delete task.')
   }
-}
-
-async function onRequestConfirmation() {
-  try {
-    await confirmationStore.requestConfirmation(props.taskId, props.ownerId)
-  } catch (err) {
-    console.error(err)
-    alert('Failed to request confirmation.')
-  }
-}
-
-function onEdit() {
-  emit('edit', props.taskId)
 }
 </script>
 
@@ -81,7 +71,7 @@ function onEdit() {
     </div>
 
     <div class="actions">
-      <!-- ✅ Add input for actual time -->
+      <!-- Pending task input -->
       <div v-if="localStatus === 'pending'">
         <input
           v-model.number="actualTimeInput"
@@ -90,30 +80,37 @@ function onEdit() {
           placeholder="Actual time (min)"
           style="width: 150px; margin-right: 8px;"
         />
-        <button
-          @click="onComplete"
-          :disabled="taskStore.loading"
-        >
-          {{ taskStore.loading ? 'Working...' : 'Complete' }}
+        <button @click="onComplete" :disabled="taskStore.loading">
+          {{ taskStore.loading ? 'Working…' : 'Complete' }}
         </button>
       </div>
 
+      <!-- ✅ Confirm button for completed tasks -->
       <button
-        v-if="localStatus === 'completed' && !confirmed && !confirmationRequested && props.groupRequiresConfirmation"
-        @click="onRequestConfirmation"
-        :disabled="taskStore.loading"
+        v-if="localStatus === 'completed' && !props.confirmed"
+        @click="showConfirmModal = true"
       >
-        Request Confirmation
+        Confirm
       </button>
 
-      <span v-if="confirmationRequested && !confirmed">Pending confirmation…</span>
-      <span v-if="confirmed">✅ Verified</span>
+      <!-- Confirmation status -->
+      <span v-if="props.confirmationRequested && !props.confirmed">Pending confirmation…</span>
+      <span v-if="props.confirmed">✅ Verified</span>
 
+      <!-- Edit/Delete buttons -->
       <button @click="onEdit">Edit</button>
       <button @click="onDelete" :disabled="taskStore.loading">Delete</button>
     </div>
 
-    <p v-if="taskStore.error" class="error">{{ taskStore.error }}</p>
+    <!-- Modal for task confirmation -->
+    <TaskConfirm
+      v-if="showConfirmModal"
+      :taskId="props.taskId"
+      :taskName="props.title"
+      :completionTime="props.actualTime ?? 0"
+      :ownerId="props.ownerId"
+      :onClose="() => (showConfirmModal = false)"
+    />
   </div>
 </template>
 
@@ -130,9 +127,5 @@ function onEdit() {
 .status {
   margin-left: 8px;
   color: #666;
-}
-.error {
-  color: red;
-  font-size: 0.85rem;
 }
 </style>

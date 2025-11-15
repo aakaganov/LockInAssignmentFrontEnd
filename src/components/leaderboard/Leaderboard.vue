@@ -1,7 +1,31 @@
 <script setup lang="ts">
 import { computed, watch, onMounted } from 'vue'
 import { useLeaderboardStore } from '../../stores/leaderboardStore'
+import { useGroupStore } from '../../stores/groupStore'
+const groupStore = useGroupStore()
+const byTasksWithNames = computed(() =>
+  byTasks.value.map((r) => {
+    const group = groupStore.groups.find(g => g.groupId === props.groupId)
+    const member = group?.members.find((m: { userId: string; name: string }) => m.userId === r.userId)
+    return {
+      ...r,
+      name: member ? member.name : r.userId
+    }
+  })
+)
 
+const byTimeWithNames = computed(() =>
+  byTime.value.map((r) => {
+    const group = groupStore.groups.find(g => g.groupId === props.groupId)
+    const member = group?.members.find((m: { userId: string; name: string }) => m.userId === r.userId)
+    return {
+      ...r,
+      name: member ? member.name : r.userId
+    }
+  })
+)
+console.log(byTasksWithNames)
+console.log(byTimeWithNames)
 const props = defineProps<{
   groupId?: string | null
 }>()
@@ -51,17 +75,17 @@ const byTime = computed(() => leaderboardStore.byTime)
         <section>
           <h4>🏆 By Tasks</h4>
           <ol>
-            <li v-for="r in byTasks" :key="r.userId">
-              {{ r.userId }} — {{ r.completedCount }} tasks
+            <li v-for="r in byTasksWithNames" :key="r.userId">
+              {{ r.name }} — {{ r.completedCount }} tasks
             </li>
           </ol>
         </section>
 
         <section>
-          <h4>⏱️ By Time (hours)</h4>
+          <h4>⏱️ By Time (minutes)</h4>
           <ol>
-            <li v-for="r in byTime" :key="r.userId">
-              {{ r.userId }} — {{ r.completedHours.toFixed(1) }} hrs
+            <li v-for="r in byTimeWithNames" :key="r.userId">
+              {{ r.name }} — {{ r.completedMinutes }} mins
             </li>
           </ol>
         </section>

@@ -32,7 +32,7 @@ watch(() => props.ownerId, async (newOwner) => {
 // 🆕 Computed filtered tasks
 const filteredTasks = computed(() => {
   if (showCompleted.value) return taskStore.tasks
-  return taskStore.tasks.filter(t => t.status !== 'completed')
+  return taskStore.tasks.filter(t => t.status !== 'completed' && t.status !== 'confirmed')
 })
 </script>
 
@@ -41,9 +41,13 @@ const filteredTasks = computed(() => {
     <div class="header">
       <h3>Your Tasks</h3>
 
-      <!-- 🆕 Toggle button -->
+      <!-- Toggle button -->
       <button @click="showCompleted = !showCompleted">
         {{ showCompleted ? 'Hide Completed' : 'Show Completed' }}
+      </button>
+      <!-- Suggested order button -->
+      <button @click="taskStore.suggestTaskOrder()" style="margin-left: 8px;">
+        Suggest Order
       </button>
     </div>
 
@@ -70,9 +74,9 @@ const filteredTasks = computed(() => {
           :actualTime="t.actualTime"
           :status="t.status"
           :ownerId="props.ownerId"
-          :groupRequiresConfirmation="t.groupRequiresConfirmation ?? false"
-          :confirmationRequested="t.confirmationRequested ?? false"
-          :confirmed="t.confirmed ?? false"
+          :groupRequiresConfirmation="t.groupRequiresConfirmation"
+          :confirmationRequested="t.confirmationRequested"
+          :confirmed="t.confirmed"
           @edit="(id) => emit('editTask', id)"
         />
       </div>

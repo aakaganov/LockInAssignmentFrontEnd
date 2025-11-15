@@ -2,146 +2,165 @@
 import { defineStore } from "pinia";
 import * as api from "../apiClient";
 
-export const useUserStore = defineStore("userStore", {
-  state: () => ({
-    users: [] as { userId: string; name: string; email: string }[],
-    currentUser: null as { userId: string; name: string; email: string } | null,
+export interface User {
+  userId: string;
+  name: string;
+  email: string;
+}
+
+interface UserStoreState {
+  users: User[];
+  currentUser: User | null;
+  loading: boolean;
+  error: string | null;
+}
+
+// ✅ ADD THIS — missing actions interface
+interface UserStoreActions {
+  syncCurrentUser(userId: string): Promise<User>;
+  fetchUser(userId: string): Promise<User>;
+  signup(name: string, email: string, password: string): Promise<User>;
+  login(email: string, password: string): Promise<User>;
+  logout(): void;
+  restoreSession(): Promise<boolean>;
+  updateUser(userId: string, name: string, email: string, password?: string): Promise<void>;
+  deleteUser(userId: string): Promise<void>;
+}
+
+// ✅ This now works because actions interface is defined
+export const useUserStore = defineStore<
+  "userStore",
+  UserStoreState,
+  {},
+  UserStoreActions
+>("userStore", {
+  state: (): UserStoreState => ({
+    users: [],
+    currentUser: null,
     loading: false,
-    error: null as string | null,
+    error: null,
   }),
 
   actions: {
-    /** Fetch user info from API by email */
-    async fetchUser(userId: string) {
+    async syncCurrentUser(userId: string): Promise<User> {
       this.loading = true;
       this.error = null;
       try {
         const res = await api.getUser(userId);
         if (res.error) throw new Error(res.error);
 
-        const userData = { userId, name: res.name, email: res.email };
+        const userData = {
+          userId: res.user.userId,
+          name: res.user.name,
+          email: res.user.email,
+        };
+
         const index = this.users.findIndex(u => u.userId === userId);
         if (index !== -1) this.users[index] = userData;
         else this.users.push(userData);
 
-        // Update currentUser if it matches
-        if (this.currentUser?.userId === userId) {
+        if (!this.currentUser || this.currentUser.userId === userId) {
           this.currentUser = userData;
           localStorage.setItem("currentUser", JSON.stringify(this.currentUser));
         }
-        return userData; // ✅ return user for consistency
-      } catch (err: any) {
-        this.error = err.message;
-        throw err;
+
+        return userData;
       } finally {
         this.loading = false;
       }
     },
-    /** Signup a new user */
+
+    async fetchUser(userId: string) {
+      return await this.syncCurrentUser(userId);
+    },
+
     async signup(name: string, email: string, password: string) {
       const res = await api.addUser(name, email, password);
       if (res.error) throw new Error(res.error);
 
-      const user = { userId: res.user.userId, name: res.user.name, email: res.user.email };
+      const user: User = { userId: res.user.userId, name, email };
       this.currentUser = user;
       localStorage.setItem("currentUser", JSON.stringify(user));
-      return user; // ✅ return user
+
+      return user;
     },
 
-    /** Login existing user */
-    async login(email: string, password: string) {
+    async login(email: string, password: string): Promise<User> {
       this.loading = true;
       this.error = null;
       try {
         const res = await api.loginUser(email, password);
         if (res.error) throw new Error(res.error);
 
-        const user = { userId: res.user.userId, name: res.user.name, email: res.user.email };
+        const user = {
+          userId: res.user.userId,
+          name: res.user.name,
+          email: res.user.email,
+        };
+
         this.currentUser = user;
         localStorage.setItem("currentUser", JSON.stringify(user));
 
-        // Fetch full info to sync
         await this.fetchUser(user.userId);
-        return user; // ✅ return user
-      } catch (err: any) {
-        this.currentUser = null;
-        localStorage.removeItem("currentUser");
-        this.error = err.message;
-        throw err;
+        return user;
       } finally {
         this.loading = false;
       }
     },
 
-    /** Logout user */
     logout() {
       this.currentUser = null;
       localStorage.removeItem("currentUser");
     },
 
-    /** Restore session from localStorage */
-    async restoreSession() {
+    async restoreSession(): Promise<boolean> {
       const saved = localStorage.getItem("currentUser");
       if (!saved) return false;
 
       try {
         const parsed = JSON.parse(saved);
         if (parsed?.userId) {
-          const res = await api.getUser(parsed.userId);
-          if (!res.error) {
-            this.currentUser = { userId: parsed.userId, name: res.name, email: res.email };
-            localStorage.setItem("currentUser", JSON.stringify(this.currentUser));
-            return true;
-          }
+          await this.syncCurrentUser(parsed.userId);
+          return true;
         }
+      } catch {}
 
-        this.currentUser = null;
-        localStorage.removeItem("currentUser");
-        return false;
-      } catch {
-        this.currentUser = null;
-        localStorage.removeItem("currentUser");
-        return false;
-      }
+      this.currentUser = null;
+      localStorage.removeItem("currentUser");
+      return false;
     },
 
-    /** Update user info */
     async updateUser(userId: string, name: string, email: string, password?: string) {
       this.loading = true;
       this.error = null;
+
       try {
         const res = await api.updateUser(userId, name, email, password);
         if (res.error) throw new Error(res.error);
 
-        const updatedUser = { userId: email, name, email };
+        const updatedUser = { userId, name, email };
         const index = this.users.findIndex(u => u.userId === userId);
         if (index !== -1) this.users[index] = updatedUser;
 
         if (this.currentUser?.userId === userId) {
           this.currentUser = updatedUser;
-          localStorage.setItem("currentUser", JSON.stringify(this.currentUser));
+          localStorage.setItem("currentUser", JSON.stringify(updatedUser));
         }
-      } catch (err: any) {
-        this.error = err.message;
-        throw err;
       } finally {
         this.loading = false;
       }
     },
 
-    /** Delete user */
     async deleteUser(userId: string) {
       this.loading = true;
       this.error = null;
+
       try {
         const res = await api.deleteUser(userId);
         if (res.error) throw new Error(res.error);
 
         this.users = this.users.filter(u => u.userId !== userId);
         if (this.currentUser?.userId === userId) this.logout();
-      } catch (err: any) {
-        this.error = err.message;
-        throw err;
       } finally {
         this.loading = false;
       }

@@ -19,7 +19,7 @@ async function handleAuth() {
   }
 
   try {
-    let result;
+    let result
     if (isSignup.value) {
       if (!name.value.trim()) {
         alert("Name is required for signup.")
@@ -41,71 +41,77 @@ async function handleAuth() {
 <template>
   <div class="login-card">
     <h3>{{ isSignup ? "Create Account" : "Login" }}</h3>
-
+    
     <div class="inputs">
-      <input v-if="isSignup" v-model="name" placeholder="Name" />
+      <input v-if="isSignup" v-model="name" placeholder="Full Name" />
       <input v-model="email" placeholder="Email or Username" />
-      <input v-model="password" placeholder="Password" type="password" />
+      <input v-model="password" type="password" placeholder="Password" />
     </div>
 
     <button @click="handleAuth">
       {{ isSignup ? "Sign Up" : "Login" }}
     </button>
 
-    <p @click="isSignup = !isSignup" class="toggle">
-      {{ isSignup ? "Have an account? Login instead" : "No account? Sign up" }}
+    <p class="toggle" @click="isSignup = !isSignup">
+      {{ isSignup ? "Already have an account? Login" : "No account? Sign up" }}
     </p>
   </div>
 </template>
 
 <style scoped>
 .login-card {
-  max-width: 380px;
-  margin: 40px auto;
-  padding: 24px;
-  background-color: #fff;
-  border-radius: 12px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  max-width: 400px;
+  margin: 60px auto;
+  padding: 32px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 12px 24px rgba(0,0,0,0.12);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   text-align: center;
+  transition: transform 0.2s;
+}
+
+.login-card:hover {
+  transform: translateY(-2px);
 }
 
 h3 {
-  font-size: 1.5rem;
-  color: #2c3e50;
-  margin-bottom: 12px;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e2a38;
+  margin-bottom: 16px;
 }
 
 .inputs {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
 }
 
 input {
-  padding: 10px 14px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
   font-size: 1rem;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: all 0.2s;
 }
 
 input:focus {
   border-color: #3498db;
-  box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+  box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
   outline: none;
 }
 
 button {
-  padding: 12px;
-  margin-top: 8px;
-  border-radius: 8px;
+  padding: 14px;
+  border-radius: 10px;
   background-color: #3498db;
-  color: white;
-  border: none;
+  color: #fff;
+  font-weight: 600;
   font-size: 1rem;
+  border: none;
   cursor: pointer;
   transition: background-color 0.2s, transform 0.1s;
 }
@@ -119,7 +125,7 @@ button:hover {
   color: #3498db;
   text-decoration: underline;
   cursor: pointer;
-  font-size: 0.9rem;
-  margin-top: 8px;
+  font-size: 0.95rem;
+  margin-top: 12px;
 }
 </style>

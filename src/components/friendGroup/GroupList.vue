@@ -34,6 +34,7 @@ async function deleteGroup(groupId: string) {
   try {
     const res = await groupStore.deleteGroup(groupId, props.userId)
     console.log("Delete response:", res);
+    
   } catch (err: any) {
     console.error("Failed to delete group:", err.message)
   }
@@ -63,6 +64,7 @@ async function deleteGroup(groupId: string) {
         :key="g.groupId"
         class="group-item"
       >
+        <!-- Display the groupName and emit the groupId (App expects an ID) -->
         <span @click="$emit('selectGroup', g.groupId)">
           {{ g.groupName }}
         </span>

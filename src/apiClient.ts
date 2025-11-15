@@ -1,5 +1,20 @@
 const BASE_URL = "http://localhost:8000/api"; // change if needed
+async function post(endpoint: string, body: any) {
+  const res = await fetch(`${BASE_URL}${endpoint}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
 
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    console.warn("Non-JSON response from API:", text);
+    return {}; // fallback empty object
+  }
+}
+/**
 async function post(endpoint: string, body: any) {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     method: "POST",
@@ -7,7 +22,7 @@ async function post(endpoint: string, body: any) {
     body: JSON.stringify(body),
   });
   return res.json();
-}
+} */
 
 // ===== ACCOUNT ACTIONS =====
 
@@ -58,6 +73,15 @@ export async function listTasks(ownerId: string) {
   return post("/Task/listTasks", { ownerId });
 }
 
+export async function suggestTaskOrder(tasks: {
+  taskId: string;
+  title: string;
+  description?: string | null;
+  dueDate?: string | null;
+  estimatedTime: number;
+}[]) {
+  return post("/Task/suggestTaskOrder", { tasks });
+}
 
 // ===== GROUP ACTIONS =====
 export async function createGroup({
@@ -128,9 +152,27 @@ export async function declineInvite(payload: {
 
 
 // ===== CONFIRMATION ACTIONS =====
-export async function requestConfirmation(taskId: string, requestedBy: string) {
-  return post("/ConfirmTask/requestConfirmation", { taskId, requestedBy });
+// ===== CONFIRMATION ACTIONS =====
+export async function requestConfirmation(
+  taskId: string,
+  requestedBy: string,
+  taskName: string,                // ✅ add
+  completionTime?: number,  
+  groupId?: string,
+  selectedPeers?: string[],
+  actualTime?: number
+) {
+  // ✅ Support both legacy and extended formats
+  const payload: any = { taskId, requestedBy, taskName};
+
+  if (completionTime !== undefined) payload.completionTime = completionTime;
+  if (groupId) payload.groupId = groupId;
+  if (selectedPeers && selectedPeers.length > 0) payload.selectedPeerIds = selectedPeers;
+
+
+  return post("/ConfirmTask/requestConfirmation", payload);
 }
+
 
 export async function confirmTask(taskId: string, peerId: string) {
   return post("/ConfirmTask/confirmTask", { taskId, peerId });
@@ -142,6 +184,9 @@ export async function finalizeConfirmation(taskId: string) {
 
 export async function getConfirmations(userId: string) {
   return post("/ConfirmTask/getConfirmations", { userId });
+}
+export async function denyTask(taskId: string, peerId: string) {
+  return post("/ConfirmTask/denyTask", { taskId, peerId });
 }
 
 // ===== LEADERBOARD ACTIONS =====
@@ -176,4 +221,10 @@ export async function acceptGroupInvite(payload: { groupId: string; userId: stri
 
 export async function deleteGroup(payload: { groupId: string; userId: string }) {
   return post("/FriendGroup/deleteGroup", payload);
+}
+export async function fetchPendingConfirmationsForPeer(peerId: string) {
+  return post("/ConfirmTask/getPendingConfirmationsForPeer", { peerId });
+}
+export async function leaveGroup(groupId: string, userId: string) {
+  return post("/FriendGroup/leaveGroup", { groupId, userId });
 }

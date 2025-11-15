@@ -2,22 +2,21 @@
 import { ref, watch, onMounted } from 'vue'
 import { useConfirmationStore } from '../../stores/confirmationStore'
 import { useNotificationStore } from '../../stores/notificationStore'
-import { acceptInvite } from '../../apiClient'
 import { useGroupStore } from '../../stores/groupStore'
+import { useTaskStore } from '../../stores/taskStore'
+import { useUserStore } from '../../stores/userStore'
 import ConfirmAction from './ConfirmAction.vue'
 
-const props = defineProps<{
-  userId: string | null
-}>()
+const props = defineProps<{ userId: string | null }>()
 
-// Unified notifications array
 interface Notification {
   id: string
   type: 'task' | 'group_invite'
-  relatedId: string // taskId or groupId
+  relatedId: string
   fromUser: string
-  status: 'pending' | 'accepted' | 'verified' | "declined"
-  extra?: any // optional payload (e.g., groupName)
+  status: 'pending' | 'accepted' | 'verified' | 'declined'
+  extra?: any
+  taskName?: string
 }
 
 const notifications = ref<Notification[]>([])
@@ -25,33 +24,99 @@ const notifications = ref<Notification[]>([])
 const confirmationStore = useConfirmationStore()
 const notificationStore = useNotificationStore()
 const groupStore = useGroupStore()
+const taskStore = useTaskStore()
+const userStore = useUserStore()
 
-
-// Load notifications from both stores
 async function loadNotifications() {
   if (!props.userId) return
+  console.log("Current userId:", props.userId); // <<< ADD THIS
+  // --- Fetch pending confirmations ---
+  await confirmationStore.fetchPendingConfirmationsForPeer(props.userId)
+  
+  notifications.value = []
 
-  // Task confirmations
-  await confirmationStore.fetchConfirmations(props.userId)
-  const taskNotifications: Notification[] = confirmationStore.confirmations.map(c => ({
-    id: c.taskId,
-    type: 'task',
-    relatedId: c.taskId,
-    fromUser: c.requestedBy,
-    status: c.status,
-  }))
+  await taskStore.fetchTasks(props.userId)
+  const tasks = taskStore.tasks
+  confirmationStore.confirmations.forEach(c => {
+    console.log("Checking confirmation", c.taskId, "for user", props.userId,
+      "status:", c.status,
+      "confirmedBy:", c.confirmedBy,
+      "deniedBy:", c.deniedBy
+    );
+  });
+  const taskNotifications: Notification[] = await Promise.all(confirmationStore.confirmations
+    .filter(c =>
+      props.userId &&
+      c.status === 'pending' &&
+      !c.confirmedBy?.includes(props.userId) &&
+      !c.deniedBy?.includes(props.userId)
+    )
+    .map(async c => {
+      let senderName = c.requestedBy
+      try {
+        await userStore.fetchUser(c.requestedBy)
+        const user = userStore.users.find(u => u.userId === c.requestedBy)
+        if (user && user.name) senderName = user.name
+      } catch {}
 
-  // Group invites
+      return {
+        id: c.taskId,
+        type: 'task',
+        relatedId: c.taskId,
+        taskName: c.taskName,       // ✅ use the taskName from confirmation
+        fromUser: senderName,
+        status: c.status,
+        extra: {actualTime: c.actualTime ?? tasks.find(t => t.taskId === c.taskId)?.actualTime } // ✅ include actualTime if needed
+      }
+    })
+)
+  /*
+  confirmationStore.confirmations
+      .filter(c => 
+      c.status === 'pending' &&
+      !c.confirmedBy?.includes(props.userId) &&
+      !c.deniedBy?.includes(props.userId)
+    )
+      .map(async c => {
+        const task = tasks.find(t => t.taskId === c.taskId)
+        const taskName = task ? task.title : `Task ${c.taskId}`
+        const filteredConfirmations = confirmationStore.confirmations.filter(cf => 
+          cf.taskId === c.taskId &&
+          cf.status === 'pending' &&
+          !cf.confirmedBy?.includes(props.userId) &&
+          !cf.deniedBy?.includes(props.userId)
+        );
+        console.log("Filtered task confirmations for user:", props.userId, filteredConfirmations);
+
+        let senderName = c.requestedBy
+        try {
+          await userStore.fetchUser(c.requestedBy)
+          const user = userStore.users.find(u => u.userId === c.requestedBy)
+          if (user && user.name) senderName = user.name
+        } catch {}
+
+        return {
+          id: c.taskId,
+          type: 'task',
+          relatedId: c.taskId,
+          taskName,
+          fromUser: senderName,
+          status: c.status,
+        }
+      })
+      */
+  
+  // --- Fetch group invites ---
   await notificationStore.fetchNotifications(props.userId)
   const groupNotifications: Notification[] = notificationStore.notifications
-    .filter(n => n.type === 'group_invite')
+    .filter(n => n.type === 'group_invite' && n.status === 'pending')
     .map(n => ({
       id: n.id,
       type: 'group_invite',
-      relatedId: n.groupId,
-      fromUser: n.fromUser,
+      relatedId: n.groupId!,
+      fromUser: n.fromUserName || 'Unknown',
       status: n.status,
-      extra: { groupName: n.groupName }
+      extra: { groupName: n.groupName },
     }))
 
   notifications.value = [...taskNotifications, ...groupNotifications]
@@ -60,58 +125,86 @@ async function loadNotifications() {
 onMounted(loadNotifications)
 watch(() => props.userId, loadNotifications)
 
-// Handlers
-function handleConfirmed(taskId: string, peerId?: string) {
-  if (!peerId) return
-  const notification = notifications.value.find(n => n.id === taskId && n.type === 'task')
-  if (notification) {
-    notification.status = 'verified'
-    confirmationStore.confirmTask(taskId, peerId)
-  }
-}
-
+// --- Group invite handlers ---
 async function handleAcceptInvite(notification: Notification) {
   if (!props.userId) return
   try {
     await notificationStore.acceptInvite({
       groupId: notification.relatedId,
-      userId: props.userId
+      userId: props.userId,
     })
-    notification.status = 'accepted'
-    // Optionally refresh groups in groupStore here
+    notifications.value = notifications.value.filter(n => n.id !== notification.id)
   } catch (err: any) {
     console.error('Failed to accept invite:', err.message)
   }
 }
 
+async function handleDeclineInvite(notification: Notification) {
+  if (!props.userId) return
+  try {
+    await notificationStore.declineInvite({
+      groupId: notification.relatedId,
+      userId: props.userId,
+    })
+    notifications.value = notifications.value.filter(n => n.id !== notification.id)
+  } catch (err: any) {
+    console.error('Failed to decline invite:', err.message)
+  }
+}
+
+// --- Task confirmation handlers ---
+async function handleConfirmed(taskId: string, peerId?: string) {
+  if (!peerId) return
+  try {
+    await confirmationStore.confirmTask(taskId, peerId) // persist to backend
+    notifications.value = notifications.value.filter(n => n.id !== taskId)
+  } catch (err: any) {
+    console.error('Failed to confirm task:', err.message)
+  }
+}
+
+async function handleDenied(taskId: string, peerId?: string) {
+  if (!peerId) return
+  try {
+    await confirmationStore.denyTask(taskId, peerId) // persist to backend
+    notifications.value = notifications.value.filter(n => n.id !== taskId)
+  } catch (err: any) {
+    console.error('Failed to deny task:', err.message)
+  }
+}
 </script>
 
 <template>
   <div class="notification-list">
     <h3>Notifications</h3>
+
     <div v-if="notifications.length === 0">
       <p>No notifications.</p>
     </div>
+
     <ul>
       <li v-for="n in notifications" :key="n.id">
         <template v-if="n.type === 'task'">
-          <strong>Task:</strong> {{ n.relatedId }} — requested by {{ n.fromUser }} — status: {{ n.status }}
+          <strong>Task:</strong> {{ n.taskName || n.extra?.taskName || n.relatedId  }}
+          — requested by {{ n.fromUser }}
+          - spent {{n.extra?.actualTime || 'N/A' }} mins
+          — status: {{ n.status }}
           <ConfirmAction
             v-if="n.status === 'pending'"
-            :taskId="n.relatedId"
+            :taskId="n.id"
             :peerId="props.userId"
             @confirmed="handleConfirmed"
+            @denied="handleDenied"
           />
         </template>
 
         <template v-else-if="n.type === 'group_invite'">
-          <strong>Group Invite:</strong> {{ n.extra.groupName }} — invited by {{ n.fromUser }} — status: {{ n.status }}
-          <button
-            v-if="n.status === 'pending'"
-            @click="handleAcceptInvite(n)"
-          >
-            Accept
-          </button>
+          <strong>Group Invite:</strong>
+          {{ n.extra.groupName }} — invited by {{ n.fromUser }}
+          <div v-if="n.status === 'pending'" class="confirm-action">
+            <button @click="handleAcceptInvite(n)">Accept</button>
+            <button class="deny" @click="handleDeclineInvite(n)">Decline</button>
+          </div>
         </template>
       </li>
     </ul>
@@ -119,23 +212,24 @@ async function handleAcceptInvite(notification: Notification) {
 </template>
 
 <style scoped>
-.notification-list {
-  padding: 8px;
-  border: 1px dashed #eee;
-  border-radius: 6px;
-}
-
-button {
+/* Reuse ConfirmAction styling */
+.confirm-action button {
   background: #2b8aef;
   color: white;
   border: none;
-  padding: 4px 8px;
+  padding: 6px 10px;
   border-radius: 4px;
+  margin-right: 4px;
   cursor: pointer;
-  margin-left: 8px;
+  transition: background 0.2s;
 }
-
-button:hover {
-  background: #1a6fc2;
+.confirm-action button:hover {
+  background: #1c6dd0;
+}
+.confirm-action button.deny {
+  background: #ef2b2b;
+}
+.confirm-action button.deny:hover {
+  background: #d12020;
 }
 </style>
