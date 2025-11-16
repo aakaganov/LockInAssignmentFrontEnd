@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
-
+console.log(API_BASE);
 
 async function post(endpoint: string, body: any) {
   const res = await fetch(`${API_BASE}${endpoint}`, {
