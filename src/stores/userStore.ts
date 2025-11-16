@@ -104,8 +104,7 @@ export const useUserStore = defineStore<
         };
 
         this.currentUser = user;
-        localStorage.setItem("currentUser", JSON.stringify(user));
-
+        
         await this.fetchUser(user.userId);
         return user;
       } finally {

@@ -29,6 +29,11 @@ async function handleAuth() {
     } else {
       result = await userStore.login(email.value.trim(), password.value)
     }
+    if (!result || !result.userId) {
+      console.error('Login failed: result or result.userId is undefined', result)
+      alert("Login failed. Please check your credentials or backend.")
+      return
+    }
 
     emit('login', result.userId)
   } catch (err: any) {
