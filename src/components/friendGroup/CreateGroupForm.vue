@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { useGroupStore } from '../../stores/groupStore';
-//import * as api from '../../apiClient';
 
 const props = defineProps<{
   ownerId: string;

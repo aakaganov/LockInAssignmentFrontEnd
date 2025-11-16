@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getNotifications, acceptInvite, declineInvite } from '../apiClient'
+import { getNotifications, declineInvite } from '../apiClient'
 import { useGroupStore } from './groupStore'
 
 export const useNotificationStore = defineStore('notificationStore', () => {

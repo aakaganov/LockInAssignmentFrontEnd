@@ -170,13 +170,13 @@ export const useTaskStore = defineStore("taskStore", {
         // Log the suggested order
         console.log(
           "Suggested task order:",
-          data.orderedTaskIds.map(id => this.tasks.find(t => t.taskId === id)?.title)
+          data.orderedTaskIds.map(id: string => this.tasks.find(t => t.taskId === id)?.title)
         );
 
         // Reorder tasks
         const taskMap = new Map(this.tasks.map(t => [t.taskId, t]));
         this.tasks = data.orderedTaskIds
-          .map(id => taskMap.get(id))
+          .map(id: string => taskMap.get(id))
           .filter(Boolean);
 
       } catch (err: any) {

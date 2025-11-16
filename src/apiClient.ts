@@ -163,7 +163,7 @@ export async function requestConfirmation(
   completionTime?: number,  
   groupId?: string,
   selectedPeers?: string[],
-  actualTime?: number
+  //actualTime?: number
 ) {
   // ✅ Support both legacy and extended formats
   const payload: any = { taskId, requestedBy, taskName};
