@@ -1,15 +1,8 @@
-import axios from "axios";
-
-// Use environment variable from Vite, fallback to local '/api' for dev
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 
-export const apiClient = axios.create({
-  baseURL: API_BASE,
-  timeout: 5000,
-});
 
 async function post(endpoint: string, body: any) {
-  const res = await fetch(`${BASE_URL}${endpoint}`, {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
