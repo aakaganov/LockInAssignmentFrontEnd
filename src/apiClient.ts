@@ -1,4 +1,5 @@
 const BASE_URL = "http://localhost:8000/api"; // change if needed
+const API_BASE = import.met.env.VITE_API_BASE_URL || '/api'
 async function post(endpoint: string, body: any) {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     method: "POST",
@@ -15,7 +16,8 @@ async function post(endpoint: string, body: any) {
   }
 }
 /**
-async function post(endpoint: string, body: any) {
+async function p
+ost(endpoint: string, body: any) {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
