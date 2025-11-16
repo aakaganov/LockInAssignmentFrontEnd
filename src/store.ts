@@ -1,7 +1,7 @@
-import { defineStore } from 'pinia'
-import * as api from './apiClient'
+import { defineStore } from "pinia";
+import * as api from "./apiClient";
 
-export const useAppStore = defineStore('app', {
+export const useAppStore = defineStore("app", {
   state: () => ({
     users: [] as any[],
     tasks: [] as any[],
@@ -16,12 +16,18 @@ export const useAppStore = defineStore('app', {
       // update reactive state
     },
     async fetchTasks(ownerId: string) {
-      this.tasks = await api.listTasks(ownerId)
+      this.tasks = await api.listTasks(ownerId);
     },
-    async createTask(ownerId: string, title: string, description: string | null, dueDate: string | null, estimatedTime: number) {
-      await api.createTask(ownerId, title, description, dueDate, estimatedTime)
-      await this.fetchTasks(ownerId)
+    async createTask(
+      ownerId: string,
+      title: string,
+      description: string | null,
+      dueDate: string | null,
+      estimatedTime: number,
+    ) {
+      await api.createTask(ownerId, title, description, dueDate, estimatedTime);
+      await this.fetchTasks(ownerId);
     },
     // Add more actions for confirmations, groups, leaderboard...
-  }
-})
+  },
+});

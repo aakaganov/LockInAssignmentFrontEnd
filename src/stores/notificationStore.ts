@@ -1,20 +1,22 @@
-import { defineStore } from 'pinia'
-import { ref } from 'vue'
-import { getNotifications, declineInvite } from '../apiClient'
-import { useGroupStore } from './groupStore'
+import { defineStore } from "pinia";
+import { ref } from "vue";
+import { getNotifications, declineInvite } from "../apiClient";
+import { useGroupStore } from "./groupStore";
 
-export const useNotificationStore = defineStore('notificationStore', () => {
-  const notifications = ref<Array<{
-    id: string
-    type: 'group_invite' | 'task_confirmation'
-    groupId?: string
-    taskId?: string
-    fromUserId: string
-    fromUserName?: string
-    status: 'pending' | 'accepted' | 'declined' | 'verified'
-    groupName?: string
-    taskName?: string
-  }>>([])
+export const useNotificationStore = defineStore("notificationStore", () => {
+  const notifications = ref<
+    Array<{
+      id: string;
+      type: "group_invite" | "task_confirmation";
+      groupId?: string;
+      taskId?: string;
+      fromUserId: string;
+      fromUserName?: string;
+      status: "pending" | "accepted" | "declined" | "verified";
+      groupName?: string;
+      taskName?: string;
+    }>
+  >([]);
 
   /** Normalize backend notifications to match FE expectations */
   function normalizeNotification(n: any) {
@@ -24,15 +26,15 @@ export const useNotificationStore = defineStore('notificationStore', () => {
 
       // Task confirmation notifications
       taskId:
-        n.type === 'task_confirmation'
-          ? n.relatedTaskId ?? n.taskId ?? undefined
+        n.type === "task_confirmation"
+          ? (n.relatedTaskId ?? n.taskId ?? undefined)
           : undefined,
 
       // Group invite notifications
-      groupId: n.type === 'group_invite' ? n.groupId ?? undefined : undefined,
+      groupId: n.type === "group_invite" ? (n.groupId ?? undefined) : undefined,
 
       fromUserId: n.fromUserId,
-      fromUserName: n.fromUserName ?? n.fromUser ?? 'Unknown User',
+      fromUserName: n.fromUserName ?? n.fromUser ?? "Unknown User",
 
       status: n.status,
 
@@ -41,44 +43,54 @@ export const useNotificationStore = defineStore('notificationStore', () => {
 
       // Preserve extra fields safely
       extra: n.extra ?? undefined,
-    }
+    };
   }
 
   async function fetchNotifications(userId: string) {
-    if (!userId) return
-    const result = await getNotifications({ userId })
+    if (!userId) return;
+    const result = await getNotifications({ userId });
 
     notifications.value = (result.notifications || [])
-      .filter((n: any) => n.status === 'pending' && n.userId === userId)
-      .map((n: any) => normalizeNotification(n))
+      .filter((n: any) => n.status === "pending" && n.userId === userId)
+      .map((n: any) => normalizeNotification(n));
   }
 
-  async function acceptInviteAction(payload: { groupId: string; userId: string }) {
-    const groupStore = useGroupStore()
-    const res = await acceptInvite(payload)
+  async function acceptInviteAction(payload: {
+    groupId: string;
+    userId: string;
+  }) {
+    const groupStore = useGroupStore();
+    const res = await acceptInvite(payload);
 
     if (res.success) {
-      const index = notifications.value.findIndex(n => n.groupId === payload.groupId)
-      if (index !== -1) notifications.value.splice(index, 1)
-      await groupStore.fetchGroups(payload.userId)
+      const index = notifications.value.findIndex(
+        (n) => n.groupId === payload.groupId,
+      );
+      if (index !== -1) notifications.value.splice(index, 1);
+      await groupStore.fetchGroups(payload.userId);
     }
-    return res
+    return res;
   }
 
-  async function declineInviteAction(payload: { groupId: string; userId: string }) {
-    const res = await declineInvite(payload)
+  async function declineInviteAction(payload: {
+    groupId: string;
+    userId: string;
+  }) {
+    const res = await declineInvite(payload);
 
     if (res.success) {
-      const index = notifications.value.findIndex(n => n.groupId === payload.groupId)
-      if (index !== -1) notifications.value.splice(index, 1)
+      const index = notifications.value.findIndex(
+        (n) => n.groupId === payload.groupId,
+      );
+      if (index !== -1) notifications.value.splice(index, 1);
     }
-    return res
+    return res;
   }
 
   return {
     notifications,
     fetchNotifications,
     acceptInvite: acceptInviteAction,
-    declineInvite: declineInviteAction
-  }
-})
+    declineInvite: declineInviteAction,
+  };
+});

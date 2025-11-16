@@ -1,15 +1,15 @@
 // stores/leaderboardStore.ts
-import { defineStore } from "pinia"
-import { getLeaderboardByTasks, getLeaderboardByTime } from "../apiClient"
+import { defineStore } from "pinia";
+import { getLeaderboardByTasks, getLeaderboardByTime } from "../apiClient";
 
 interface TaskLeaderboardEntry {
-  userId: string
-  completedCount: number
+  userId: string;
+  completedCount: number;
 }
 
 interface TimeLeaderboardEntry {
-  userId: string
-  completedMinutes: number
+  userId: string;
+  completedMinutes: number;
 }
 
 export const useLeaderboardStore = defineStore("leaderboardStore", {
@@ -28,55 +28,55 @@ export const useLeaderboardStore = defineStore("leaderboardStore", {
   actions: {
     /** Sync both leaderboards (tasks + time) */
     async syncLeaderboard(groupId: string) {
-      this.loading = true
-      this.error = null
+      this.loading = true;
+      this.error = null;
 
       try {
         const [tasks, time] = await Promise.all([
           getLeaderboardByTasks(groupId),
           getLeaderboardByTime(groupId),
-        ])
+        ]);
 
-        this.byTasks = tasks.leaderboard || []
-        this.byTime = time.leaderboard || []
+        this.byTasks = tasks.leaderboard || [];
+        this.byTime = time.leaderboard || [];
       } catch (err: any) {
-        console.error("Leaderboard sync error:", err)
-        this.error = err.message
+        console.error("Leaderboard sync error:", err);
+        this.error = err.message;
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
     /** Original functions kept 100% intact */
     async fetchByTasks(groupId: string) {
-      console.log("Fetching tasks leaderboard for group:", groupId)
-      this.loading = true
-      this.error = null
+      console.log("Fetching tasks leaderboard for group:", groupId);
+      this.loading = true;
+      this.error = null;
 
       try {
-        const result = await getLeaderboardByTasks(groupId)
-        this.byTasks = result.leaderboard || []
+        const result = await getLeaderboardByTasks(groupId);
+        this.byTasks = result.leaderboard || [];
       } catch (err: any) {
-        console.error("Leaderboard fetchByTasks error:", err)
-        this.error = err.message
+        console.error("Leaderboard fetchByTasks error:", err);
+        this.error = err.message;
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
     async fetchByTime(groupId: string) {
-      console.log("Fetching time leaderboard for group:", groupId)
-      this.loading = true
-      this.error = null
+      console.log("Fetching time leaderboard for group:", groupId);
+      this.loading = true;
+      this.error = null;
 
       try {
-        const result = await getLeaderboardByTime(groupId)
-        this.byTime = result.leaderboard || []
+        const result = await getLeaderboardByTime(groupId);
+        this.byTime = result.leaderboard || [];
       } catch (err: any) {
-        console.error("Leaderboard fetchByTime error:", err)
-        this.error = err.message
+        console.error("Leaderboard fetchByTime error:", err);
+        this.error = err.message;
       } finally {
-        this.loading = false
+        this.loading = false;
       }
     },
 
@@ -85,13 +85,13 @@ export const useLeaderboardStore = defineStore("leaderboardStore", {
       await Promise.all([
         this.fetchByTasks(groupId),
         this.fetchByTime(groupId),
-      ])
+      ]);
     },
 
     reset() {
-      this.byTasks = []
-      this.byTime = []
-      this.error = null
+      this.byTasks = [];
+      this.byTime = [];
+      this.error = null;
     },
   },
-})
+});

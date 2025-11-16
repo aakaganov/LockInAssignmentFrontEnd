@@ -11,7 +11,6 @@ export const useGroupStore = defineStore("groupStore", {
   }),
 
   actions: {
-
     clearSelectedGroups() {
       this.groups = [];
     },
@@ -22,7 +21,10 @@ export const useGroupStore = defineStore("groupStore", {
 
       try {
         const res = await api.listGroups(userId);
-        console.log("groupStore.syncGroups -> fetched groups:", JSON.stringify(res, null, 2));
+        console.log(
+          "groupStore.syncGroups -> fetched groups:",
+          JSON.stringify(res, null, 2),
+        );
 
         // Normalize data for frontend
         this.groups = (res || []).map((g: any) => ({
@@ -43,7 +45,8 @@ export const useGroupStore = defineStore("groupStore", {
                 email: m.email,
               }))
             : [],
-          confirmationRequired: g.confirmationRequired ?? g.requiresConfirmation ?? false,
+          confirmationRequired:
+            g.confirmationRequired ?? g.requiresConfirmation ?? false,
           createdAt: g.createdAt,
         }));
 
@@ -101,7 +104,7 @@ export const useGroupStore = defineStore("groupStore", {
             confirmationStore.addNotification(
               memberId,
               `You were invited to join group "${groupName}"`,
-              "group_invite"
+              "group_invite",
             );
           }
         }
@@ -127,7 +130,7 @@ export const useGroupStore = defineStore("groupStore", {
           confirmationStore.addNotification(
             res.invitedUserId,
             `You were invited to join group "${groupId}"`,
-            "group_invite"
+            "group_invite",
           );
         }
       } catch (err: any) {
@@ -147,7 +150,10 @@ export const useGroupStore = defineStore("groupStore", {
       await api.declineInvite({ groupId, userId });
     },
 
-    async setConfirmationPolicy(groupId: string, requiresConfirmation: boolean) {
+    async setConfirmationPolicy(
+      groupId: string,
+      requiresConfirmation: boolean,
+    ) {
       this.loading = true;
       this.error = null;
       try {
@@ -172,7 +178,6 @@ export const useGroupStore = defineStore("groupStore", {
         this.groups = this.groups.filter((g) => g.groupId !== groupId);
 
         this.groups = this.groups.filter((g) => g.groupId !== groupId);
-
       } catch (err: any) {
         this.error = err.message;
         console.error("groupStore.deleteGroup error:", err);
@@ -181,15 +186,14 @@ export const useGroupStore = defineStore("groupStore", {
         this.loading = false;
       }
     },
-  async leaveGroup(groupId: string, userId: string) {
-    try {
-      await api.leaveGroup(groupId, userId);// Remove group from local store for leaving user
-      this.groups = this.groups.filter(g => g.groupId !== groupId);
-    } catch (err) {
-      console.error("Failed to leave group:", err);
-      throw err;
-    }
-  },
-
+    async leaveGroup(groupId: string, userId: string) {
+      try {
+        await api.leaveGroup(groupId, userId); // Remove group from local store for leaving user
+        this.groups = this.groups.filter((g) => g.groupId !== groupId);
+      } catch (err) {
+        console.error("Failed to leave group:", err);
+        throw err;
+      }
+    },
   },
 });

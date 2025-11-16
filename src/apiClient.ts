@@ -1,5 +1,5 @@
 const BASE_URL = "http://localhost:8000/api"; // change if needed
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 async function post(endpoint: string, body: any) {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     method: "POST",
@@ -15,7 +15,7 @@ async function post(endpoint: string, body: any) {
     return {}; // fallback empty object
   }
 }
-console.log(API_BASE)
+console.log(API_BASE);
 /**
 async function p
 ost(endpoint: string, body: any) {
@@ -31,7 +31,7 @@ ost(endpoint: string, body: any) {
 
 // Signup / Add user with password
 export async function addUser(name: string, email: string, password: string) {
-  return post("/Account/addUser", {name, email, password });
+  return post("/Account/addUser", { name, email, password });
 }
 
 // Get user info (no password returned)
@@ -45,7 +45,12 @@ export async function deleteUser(userId: string) {
 }
 
 // Update user info (optional password update)
-export async function updateUser(userId: string, name: string, email: string, password?: string) {
+export async function updateUser(
+  userId: string,
+  name: string,
+  email: string,
+  password?: string,
+) {
   return post("/Account/updateUser", { userId, name, email, password });
 }
 // Login user with password
@@ -53,14 +58,37 @@ export async function loginUser(email: string, password: string) {
   return post("/Account/loginUser", { email, password });
 }
 
-
 // ===== TASK ACTIONS =====
-export async function createTask(ownerId: string, title: string, description: string | null, dueDate: string | null, estimatedTime: number) {
-  return post("/Task/createTask", { ownerId, title, description, dueDate, estimatedTime });
+export async function createTask(
+  ownerId: string,
+  title: string,
+  description: string | null,
+  dueDate: string | null,
+  estimatedTime: number,
+) {
+  return post("/Task/createTask", {
+    ownerId,
+    title,
+    description,
+    dueDate,
+    estimatedTime,
+  });
 }
 
-export async function editTask(taskId: string, title?: string, description?: string, dueDate?: string, estimatedTime?: number) {
-  return post("/Task/editTask", { taskId, title, description, dueDate, estimatedTime });
+export async function editTask(
+  taskId: string,
+  title?: string,
+  description?: string,
+  dueDate?: string,
+  estimatedTime?: number,
+) {
+  return post("/Task/editTask", {
+    taskId,
+    title,
+    description,
+    dueDate,
+    estimatedTime,
+  });
 }
 
 export async function completeTask(taskId: string, actualTime: number) {
@@ -71,18 +99,19 @@ export async function deleteTask(taskId: string) {
   return post("/Task/deleteTask", { taskId });
 }
 
-
 export async function listTasks(ownerId: string) {
   return post("/Task/listTasks", { ownerId });
 }
 
-export async function suggestTaskOrder(tasks: {
-  taskId: string;
-  title: string;
-  description?: string | null;
-  dueDate?: string | null;
-  estimatedTime: number;
-}[]) {
+export async function suggestTaskOrder(
+  tasks: {
+    taskId: string;
+    title: string;
+    description?: string | null;
+    dueDate?: string | null;
+    estimatedTime: number;
+  }[],
+) {
   return post("/Task/suggestTaskOrder", { tasks });
 }
 
@@ -106,10 +135,6 @@ export async function createGroup({
   });
 }
 
-
-
-
-
 export async function addMember(groupId: string, userId: string) {
   return post("/FriendGroup/addMember", { groupId, userId });
 }
@@ -122,15 +147,21 @@ export async function listGroups(userId: string) {
   return post("/FriendGroup/listGroups", { userId });
 }
 
-export async function setConfirmationPolicy(groupId: string, requiresConfirmation: boolean) {
-  return post("/FriendGroup/setConfirmationPolicy", { groupId, requiresConfirmation });
+export async function setConfirmationPolicy(
+  groupId: string,
+  requiresConfirmation: boolean,
+) {
+  return post("/FriendGroup/setConfirmationPolicy", {
+    groupId,
+    requiresConfirmation,
+  });
 }
 // ===== GROUP INVITE ACTIONS =====
 
 // Invite a user to a group by email (sends a notification, does NOT add them yet)
-export async function inviteUserByEmail(payload: { 
-  groupId: string; 
-  email: string; 
+export async function inviteUserByEmail(payload: {
+  groupId: string;
+  email: string;
   invitedBy: string;
 }) {
   return post("/FriendGroup/inviteUserByEmail", payload);
@@ -138,44 +169,42 @@ export async function inviteUserByEmail(payload: {
 
 // Accept a group invite (user joins the group)
 
-export async function acceptInvite(payload: { 
-  groupId: string; 
-  userId: string; 
+export async function acceptInvite(payload: {
+  groupId: string;
+  userId: string;
 }) {
   return post("/FriendGroup/acceptInvite", payload);
 }
 
 // Decline a group invite
-export async function declineInvite(payload: { 
-  groupId: string; 
-  userId: string; 
+export async function declineInvite(payload: {
+  groupId: string;
+  userId: string;
 }) {
   return post("/FriendGroup/declineInvite", payload);
 }
-
 
 // ===== CONFIRMATION ACTIONS =====
 // ===== CONFIRMATION ACTIONS =====
 export async function requestConfirmation(
   taskId: string,
   requestedBy: string,
-  taskName: string,                // ✅ add
-  completionTime?: number,  
+  taskName: string, // ✅ add
+  completionTime?: number,
   groupId?: string,
   selectedPeers?: string[],
   //actualTime?: number
 ) {
   // ✅ Support both legacy and extended formats
-  const payload: any = { taskId, requestedBy, taskName};
+  const payload: any = { taskId, requestedBy, taskName };
 
   if (completionTime !== undefined) payload.completionTime = completionTime;
   if (groupId) payload.groupId = groupId;
-  if (selectedPeers && selectedPeers.length > 0) payload.selectedPeerIds = selectedPeers;
-
+  if (selectedPeers && selectedPeers.length > 0)
+    payload.selectedPeerIds = selectedPeers;
 
   return post("/ConfirmTask/requestConfirmation", payload);
 }
-
 
 export async function confirmTask(taskId: string, peerId: string) {
   return post("/ConfirmTask/confirmTask", { taskId, peerId });
@@ -193,7 +222,11 @@ export async function denyTask(taskId: string, peerId: string) {
 }
 
 // ===== LEADERBOARD ACTIONS =====
-export async function recordCompletion(userId: string, actualTime: number, groupId: string) {
+export async function recordCompletion(
+  userId: string,
+  actualTime: number,
+  groupId: string,
+) {
   return post("/Leaderboard/recordCompletion", { userId, actualTime, groupId });
 }
 
@@ -209,7 +242,6 @@ export async function resetWeeklyStats() {
   return post("/Leaderboard/resetWeeklyStats", {});
 }
 
-
 // ===== NOTIFICATION ACTIONS =====
 
 // Get all notifications (including group invites) for a user
@@ -218,11 +250,17 @@ export async function getNotifications(payload: { userId: string }) {
 }
 
 // Accept a group invite from notifications
-export async function acceptGroupInvite(payload: { groupId: string; userId: string }) {
+export async function acceptGroupInvite(payload: {
+  groupId: string;
+  userId: string;
+}) {
   return post("/Notification/acceptInvite", payload);
 }
 
-export async function deleteGroup(payload: { groupId: string; userId: string }) {
+export async function deleteGroup(payload: {
+  groupId: string;
+  userId: string;
+}) {
   return post("/FriendGroup/deleteGroup", payload);
 }
 export async function fetchPendingConfirmationsForPeer(peerId: string) {

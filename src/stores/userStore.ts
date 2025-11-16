@@ -23,7 +23,12 @@ interface UserStoreActions {
   login(email: string, password: string): Promise<User>;
   logout(): void;
   restoreSession(): Promise<boolean>;
-  updateUser(userId: string, name: string, email: string, password?: string): Promise<void>;
+  updateUser(
+    userId: string,
+    name: string,
+    email: string,
+    password?: string,
+  ): Promise<void>;
   deleteUser(userId: string): Promise<void>;
 }
 
@@ -55,7 +60,7 @@ export const useUserStore = defineStore<
           email: res.user.email,
         };
 
-        const index = this.users.findIndex(u => u.userId === userId);
+        const index = this.users.findIndex((u) => u.userId === userId);
         if (index !== -1) this.users[index] = userData;
         else this.users.push(userData);
 
@@ -130,7 +135,12 @@ export const useUserStore = defineStore<
       return false;
     },
 
-    async updateUser(userId: string, name: string, email: string, password?: string) {
+    async updateUser(
+      userId: string,
+      name: string,
+      email: string,
+      password?: string,
+    ) {
       this.loading = true;
       this.error = null;
 
@@ -139,7 +149,7 @@ export const useUserStore = defineStore<
         if (res.error) throw new Error(res.error);
 
         const updatedUser = { userId, name, email };
-        const index = this.users.findIndex(u => u.userId === userId);
+        const index = this.users.findIndex((u) => u.userId === userId);
         if (index !== -1) this.users[index] = updatedUser;
 
         if (this.currentUser?.userId === userId) {
@@ -159,7 +169,7 @@ export const useUserStore = defineStore<
         const res = await api.deleteUser(userId);
         if (res.error) throw new Error(res.error);
 
-        this.users = this.users.filter(u => u.userId !== userId);
+        this.users = this.users.filter((u) => u.userId !== userId);
         if (this.currentUser?.userId === userId) this.logout();
       } finally {
         this.loading = false;

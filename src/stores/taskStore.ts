@@ -13,8 +13,8 @@ export const useTaskStore = defineStore("taskStore", {
     normalizeTask(t: any) {
       return {
         ...t,
-        description: t.description ?? undefined,   // <-- FIX
-        dueDate: t.dueDate ?? null,                // null allowed
+        description: t.description ?? undefined, // <-- FIX
+        dueDate: t.dueDate ?? null, // null allowed
         estimatedTime: t.estimatedTime ?? 0,
         groupRequiresConfirmation: t.group?.confirmationRequired ?? false,
         confirmationRequested: t.confirmationRequested ?? false,
@@ -32,7 +32,6 @@ export const useTaskStore = defineStore("taskStore", {
 
         // Normalize tasks so the component type matches
         this.tasks = (res || []).map((t: any) => this.normalizeTask(t));
-
       } catch (err: any) {
         this.error = err.message;
       } finally {
@@ -40,12 +39,24 @@ export const useTaskStore = defineStore("taskStore", {
       }
     },
 
-    async createTask(ownerId: string, title: string, description: string | null, dueDate: string | null, estimatedTime: number) {
+    async createTask(
+      ownerId: string,
+      title: string,
+      description: string | null,
+      dueDate: string | null,
+      estimatedTime: number,
+    ) {
       this.loading = true;
       this.error = null;
 
       try {
-        const res = await api.createTask(ownerId, title, description, dueDate, estimatedTime);
+        const res = await api.createTask(
+          ownerId,
+          title,
+          description,
+          dueDate,
+          estimatedTime,
+        );
         if (res.error) throw new Error(res.error);
 
         const newTask = this.normalizeTask({
@@ -59,7 +70,6 @@ export const useTaskStore = defineStore("taskStore", {
         });
 
         this.tasks.push(newTask);
-
       } catch (err: any) {
         this.error = err.message;
       } finally {
@@ -67,7 +77,15 @@ export const useTaskStore = defineStore("taskStore", {
       }
     },
 
-    async updateTask(taskId: string, data: { title?: string; description?: string | null; dueDate?: string | null; estimatedTime?: number; }) {
+    async updateTask(
+      taskId: string,
+      data: {
+        title?: string;
+        description?: string | null;
+        dueDate?: string | null;
+        estimatedTime?: number;
+      },
+    ) {
       this.loading = true;
       this.error = null;
 
@@ -77,18 +95,17 @@ export const useTaskStore = defineStore("taskStore", {
           data.title,
           data.description ?? undefined,
           data.dueDate ?? undefined,
-          data.estimatedTime
+          data.estimatedTime,
         );
         if (res.error) throw new Error(res.error);
 
-        const index = this.tasks.findIndex(t => t.taskId === taskId);
+        const index = this.tasks.findIndex((t) => t.taskId === taskId);
         if (index !== -1) {
           this.tasks[index] = this.normalizeTask({
             ...this.tasks[index],
-            ...data
+            ...data,
           });
         }
-
       } catch (err: any) {
         this.error = err.message;
       } finally {
@@ -118,7 +135,6 @@ export const useTaskStore = defineStore("taskStore", {
         if (res.error) throw new Error(res.error);
 
         await this.fetchTasks(ownerId);
-
       } catch (err: any) {
         this.error = err.message;
       } finally {
@@ -145,13 +161,12 @@ export const useTaskStore = defineStore("taskStore", {
     },
      */
 
-
     async suggestTaskOrder() {
       if (!this.tasks || this.tasks.length === 0) return;
 
       try {
         // convert dueDate to string or null
-        const payload = this.tasks.map(t => ({
+        const payload = this.tasks.map((t) => ({
           taskId: t.taskId,
           title: t.title,
           description: t.description,
@@ -170,19 +185,20 @@ export const useTaskStore = defineStore("taskStore", {
         // Log the suggested order
         console.log(
           "Suggested task order:",
-          data.orderedTaskIds.map((id: string) => this.tasks.find(t => t.taskId === id)?.title),
+          data.orderedTaskIds.map(
+            (id: string) => this.tasks.find((t) => t.taskId === id)?.title,
+          ),
         );
 
         // Reorder tasks
-        const taskMap = new Map(this.tasks.map(t => [t.taskId, t]));
+        const taskMap = new Map(this.tasks.map((t) => [t.taskId, t]));
         this.tasks = data.orderedTaskIds
-          .map((id: string) => taskMap.get(id)).filter(Boolean);
-
+          .map((id: string) => taskMap.get(id))
+          .filter(Boolean);
       } catch (err: any) {
         console.error("Failed to suggest order:", err);
         this.error = `Could not suggest task order: ${err.message || err}`;
       }
     },
-
-  }
+  },
 });
