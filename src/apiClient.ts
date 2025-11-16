@@ -1,5 +1,13 @@
-const BASE_URL = "http://localhost:8000/api"; // change if needed
+import axios from "axios";
+
+// Use environment variable from Vite, fallback to local '/api' for dev
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
+
+export const apiClient = axios.create({
+  baseURL: API_BASE,
+  timeout: 5000,
+});
+
 async function post(endpoint: string, body: any) {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     method: "POST",
