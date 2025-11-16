@@ -2,7 +2,7 @@
 import { ref, watch, onMounted } from 'vue'
 import { useConfirmationStore } from '../../stores/confirmationStore'
 import { useNotificationStore } from '../../stores/notificationStore'
-import { useGroupStore } from '../../stores/groupStore'
+//import { useGroupStore } from '../../stores/groupStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useUserStore } from '../../stores/userStore'
 import ConfirmAction from './ConfirmAction.vue'
@@ -23,7 +23,7 @@ const notifications = ref<Notification[]>([])
 
 const confirmationStore = useConfirmationStore()
 const notificationStore = useNotificationStore()
-const groupStore = useGroupStore()
+//const groupStore = useGroupStore()
 const taskStore = useTaskStore()
 const userStore = useUserStore()
 
