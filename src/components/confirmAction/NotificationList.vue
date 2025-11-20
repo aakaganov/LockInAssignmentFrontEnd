@@ -188,7 +188,7 @@ async function handleDenied(taskId: string, peerId?: string) {
           - spent {{n.extra?.actualTime || 'N/A' }} mins
           — status: {{ n.status }}
           <ConfirmAction
-            v-if="n.status === 'pending'"
+            v-if="n.status === 'pending' && props.userId"
             :taskId="n.id"
             :peerId="props.userId"
             @confirmed="handleConfirmed"

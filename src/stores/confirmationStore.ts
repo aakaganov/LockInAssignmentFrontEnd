@@ -82,7 +82,8 @@ export const useConfirmationStore = defineStore("confirmationStore", {
       completionTime?: number,
       groupId?: string,
     ) {
-      const peers = Array.isArray(selectedPeers) ? selectedPeers : [];
+      //const peers = Array.isArray(selectedPeers) ? selectedPeers : [];
+      const peers = (selectedPeers || []).filter(p => p !== requestedBy);
       await api.requestConfirmation(
         taskId,
         requestedBy,
