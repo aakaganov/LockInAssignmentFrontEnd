@@ -1,3 +1,5 @@
+import { Requesting } from "@engine";
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "/api";
 console.log(API_BASE);
 
@@ -9,6 +11,7 @@ async function post(endpoint: string, body: any) {
   });
 
   const text = await res.text();
+  
   try {
     return JSON.parse(text);
   } catch {
@@ -42,7 +45,12 @@ export async function getUser(userId: string) {
 
 // Delete user
 export async function deleteUser(userId: string) {
-  return post("/Account/deleteUser", { userId });
+  const res = await Requesting.request({
+    path: "/api/Account/deleteUser",
+    userId,
+  });
+  if (res.error) throw new Error(res.error);
+  return res;
 }
 
 // Update user info (optional password update)
@@ -50,9 +58,17 @@ export async function updateUser(
   userId: string,
   name: string,
   email: string,
-  password?: string,
+  password?: string
 ) {
-  return post("/Account/updateUser", { userId, name, email, password });
+  const res = await Requesting.request({
+    path: "/api/Account/updateUser",
+    userId,
+    name,
+    email,
+    password,
+  });
+  if (res.error) throw new Error(res.error);
+  return res;
 }
 // Login user with password
 export async function loginUser(email: string, password: string) {
